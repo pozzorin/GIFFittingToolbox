@@ -11,7 +11,7 @@ from Filter_Rect_LogSpaced import *
 import Tools
 import matplotlib.pyplot as plt
 
-PATH = '../Data/'
+PATH = '../data/gif_test/'
 
 
 ############################################################################################################

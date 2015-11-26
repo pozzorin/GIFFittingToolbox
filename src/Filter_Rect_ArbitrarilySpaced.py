@@ -9,26 +9,31 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
 
     """
     This class define a function of time expanded using a set of arbitrarily rectangular basis functions.
-    A filter f(t) is defined in the form f(t) = sum_j b_j*rect_j(t),
+    A filter f(t) is defined in the form 
+    
+    f(t) = sum_j b_j*rect_j(t),
+    
     where b_j is a set of coefficient and rect_j is a set of rectangular basis functions.
-    The width and size of each rectangular basis function can be arbitrarily fixed.
+    The width and size of each rectangular basis function is free (it is not restricted to, eg, lin spaced).
     """
 
     def __init__(self, bins=np.array([0.0,10.0,50.0,100.0,1000.0])) :
         
         Filter.__init__(self)
         
+        # Metaparameters
+        
         self.p_length     = bins[-1]         # ms, filter length
         self.p_nbBins     = len(bins)        # integer, define the number of bins
         
-        # Coefficients b_j that define the shape of the filter f(t)
-        self.filter_coeff = np.zeros(1)   # values of bins
         
-        # Auxiliary variables that can be computed using the parameters above               
+        # Auxiliary variables that can be computed using the parameters above   
+                    
         self.bins    = []                    # ms, vector defining the rectangular basis functions for f(t)
         self.support = []                    # ms, centers of bins used to define the filter 
         
-        # Initialize        
+        # Initialize    
+            
         self.bins = bins 
         self.computeSupport()                    
         self.setFilter_toZero()              # initialize filter to 0
@@ -63,7 +68,7 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
      # Get functions
      #############################################################################
 
-    def getInterpolatedFilter(self, dt) :
+    def computeInterpolatedFilter(self, dt) :
             
         """
         Given a particular dt, the function compute and return the support t and f(t).
@@ -83,8 +88,9 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
     
             filter_interpol_support = np.arange(len(filter_interpol))*dt
     
-            return (filter_interpol_support, filter_interpol)
-    
+            self.filtersupport = filter_interpol_support
+            self.filter = filter_interpol
+        
         else :
             
             print "Error: value of the filter coefficients does not match the number of basis functions!"
@@ -102,14 +108,19 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
 
     def getLength(self):
         
+        """
+        Return length of the filter in ms.
+        """
+        
         return self.bins[-1]
     
         
     #############################################################################
-    # Functions to compute convolutions
+    # Implement abstract methods used to compute filter convolution
     #############################################################################
 
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
+        
         
         T_i     = int(T/dt)
         
@@ -168,6 +179,7 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
     def computeBins(self):
         
         pass
+
 
     def computeSupport(self):
         

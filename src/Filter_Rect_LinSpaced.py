@@ -8,21 +8,27 @@ import Tools
 class Filter_Rect_LinSpaced(Filter) :
 
     """
-    This class define a function of time expanded using linearly spaced rectangular basis functions.
-    A filter f(t) is defined in the form f(t) = sum_j b_j*rect_j(t),
-    where b_j is a set of coefficient and rect_j is a set of rectangular basis functions.
-    All the rectangular functions have the same width.
+    This class defines a temporal filter defined as a linear combination of linearly-spaced rectangular basis functions.
+    A filter f(t) is defined in the form 
+    
+    f(t) = sum_j b_j*rect_j(t),
+    
+    where b_j is a set of coefficient and rect_j is a set of linearly spaced rectangular basis functions,
+    meaning that the width of all basis functions is the same.
     """
 
     def __init__(self, length=1000.0, nbBins=30) :
         
         Filter.__init__(self)
         
+        # Metaparameters
+        
         self.p_length     = length           # ms, filter length
         self.p_nbBins     = nbBins           # integer, define the number of bins
         
         # Coefficients b_j that define the shape of the filter f(t)
-        self.filter_coeff = np.zeros(1)   # values of bins
+        
+        #self.filter_coeff = np.zeros(1)     # values of bins
         
         # Auxiliary variables that can be computed using the parameters above               
         self.bins    = []                    # ms, vector defining the rectangular basis functions for f(t)
@@ -65,11 +71,12 @@ class Filter_Rect_LinSpaced(Filter) :
      # Get functions
      #############################################################################
 
-    def getInterpolatedFilter(self, dt) :
+    def computeInterpolatedFilter(self, dt) :
             
         """
         Given a particular dt, the function compute and return the support t and f(t).
         """
+        
         self.computeBins() 
                 
         bins_i = Tools.timeToIndex(self.bins, dt)
@@ -86,7 +93,8 @@ class Filter_Rect_LinSpaced(Filter) :
     
             filter_interpol_support = np.arange(len(filter_interpol))*dt
     
-            return (filter_interpol_support, filter_interpol)
+            self.filtersupport = filter_interpol_support
+            self.filter = filter_interpol
     
         else :
             
@@ -107,6 +115,10 @@ class Filter_Rect_LinSpaced(Filter) :
 
     def getLength(self):
         
+        """
+        Return length of the filter in ms.
+        """
+        
         return self.bins[-1]
     
         
@@ -115,6 +127,11 @@ class Filter_Rect_LinSpaced(Filter) :
     #############################################################################
 
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
+        
+        """
+        Filter spike train spks with the set of rectangular basis functions defining the Filter.
+        Since all the basis functions have the same width calculation can be made efficient by filter just ones and shifting.
+        """
         
         T_i     = int(T/dt)
         
@@ -143,6 +160,11 @@ class Filter_Rect_LinSpaced(Filter) :
     
     
     def convolution_ContinuousSignal_basisfunctions(self, I, dt):
+        
+        """
+        Filter continuous signal I with the set of rectangular basis functions defining the Filter.
+        Since all the basis functions have the same width calculation can be made efficient by filter just ones and shifting.
+        """
         
         T_i     = len(I)
         
@@ -173,7 +195,7 @@ class Filter_Rect_LinSpaced(Filter) :
     def computeBins(self) :
         
         """
-        This function compute bins and support given the metaparameters.
+        This function compute self.bins and self.support given the metaparameters.
         """
                 
         self.bins    = np.linspace(0.0, self.p_length, self.p_nbBins+1) 

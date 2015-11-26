@@ -10,12 +10,13 @@ class SpikingModel :
 
     """
     Abstract class defining an interface for Spiking Neuron Model.
-    Inherit form this class to generate a new Spiking Neuron Model.
+    Inherit from this class to generate a new Spiking Neuron Model.
     To create a new model that explicitly describe the membrane potential and the voltage threshold,
-    use the class ThresholdModel.
+    see the ThresholdModel class.
     """
     
     __metaclass__  = abc.ABCMeta
+    
     
     @abc.abstractmethod
     def simulateSpikingResponse(self, I, dt):

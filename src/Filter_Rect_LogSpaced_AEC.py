@@ -11,22 +11,28 @@ class Filter_Rect_LogSpaced_AEC(Filter_Rect_LogSpaced) :
 
     """
     This class define a function of time expanded using log-spaced rectangular basis functions.
-    A filter f(t) is defined in the form f(t) = sum_j b_j*rect_j(t),
+    A filter f(t) is defined in the form 
+    
+    f(t) = sum_j b_j*rect_j(t)
+    
     where b_j is a set of coefficient and rect_j is a set of rectangular basis functions.
     The width of the rectangular basis functions increase exponentially (log-spacing).
-    This class is used to define both the spike-triggered current eta(t) and the spike-triggered
-    movement of the firing threshold gamma(t).
+    
+    Using the metaparameter p_clamp_period, one can force the first rectangular basis functions 
+    to have a specific size. Meaning that log-spacing only starts later.
     """
     
-    
     def __init__(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0, clamp_period=1.0):
+        
+        # Metaparameters
         
         self.p_clamp_period = clamp_period
          
         Filter_Rect_LogSpaced.__init__(self, length=length, binsize_lb=binsize_lb, binsize_ub=binsize_ub, slope=slope)
         
           
-        # Initialize        
+        # Initialize    
+            
         self.computeBins()                   # using meta parameters self.metaparam_subthreshold define bins and support.
         self.setFilter_toZero()              # initialize filter to 0
      
@@ -38,7 +44,7 @@ class Filter_Rect_LogSpaced_AEC(Filter_Rect_LogSpaced) :
     def computeBins(self) :
         
         """
-        This function compute bins and support given the metaparameters.
+        This function compute bins and support given metaparameters.
         """
         
         self.bins = []

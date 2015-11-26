@@ -9,7 +9,7 @@ class ThresholdModel(SpikingModel) :
 
     """
     Abstract class to define a threshold model.
-    A threshold model is a model that explicitly models the membrane potential V and the firing threshold Vt.
+    A threshold model is a model that explicitly describe the membrane potential V and the firing threshold Vt.
     The GIF model is a Threshold model, the GLM model is not.
     """
     

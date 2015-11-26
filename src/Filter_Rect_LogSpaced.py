@@ -9,18 +9,20 @@ from Filter import *
 class Filter_Rect_LogSpaced(Filter) :
 
     """
-    This class defines a function of time expanded using log-spaced rectangular basis functions.
-    A filter f(t) is defined in the form f(t) = sum_j b_j*rect_j(t),
-    where b_j is a set of coefficient and rect_j is a set of rectangular basis functions.
-    The width of the rectangular basis functions increase exponentially (log-spacing).
-    This class is used to define both the spike-triggered current eta(t) and the spike-triggered
-    movement of the firing threshold gamma(t).
+    This class defines a temporal filter defined as a linear combination of log-spaced rectangular basis functions.
+    A filter f(t) is defined in the form 
+    
+    f(t) = sum_j b_j*rect_j(t),
+    
+    where b_j is a set of coefficient and rect_j is a set of log-spaced rectangular basis functions,
+    meaning that the width of the rectangular basis functions increase exponentially (log-spacing).
     """
-
 
     def __init__(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0):
         
         Filter.__init__(self)
+        
+        # Metaparamters
         
         self.p_length     = length           # ms, filter length
         self.p_binsize_lb = binsize_lb       # ms, min size for bin
@@ -47,7 +49,7 @@ class Filter_Rect_LogSpaced(Filter) :
         
         """
         Given a function of time f(t), the bins of the filer are initialized accordingly.
-        For example, if f(t) is an exponential function, the filter will approximate an exponential using rectangular basis functions
+        For example, if f(t) is an exponential function, the filter will approximate an exponential using rectangular basis functions.
         """
         
         self.computeBins() 
@@ -57,7 +59,7 @@ class Filter_Rect_LogSpaced(Filter) :
     def setFilter_Coefficients(self, coeff):
         
         """
-        Set the coefficients of the filter (i.e. the values that define the magnitude of each rectangular function)
+        Manually set the coefficients of the filter with coeff (i.e. the values that define the magnitude of each rectangular function).
         """
         
         self.computeBins() 
@@ -67,22 +69,13 @@ class Filter_Rect_LogSpaced(Filter) :
         else :
             print "Error, the number of coefficients do not match the number of basis functions!"
         
-
-    def setFilter_toZero(self):
-        
-        """
-        Set the coefficients of the filter to 0
-        """
-        
-        self.computeBins() 
-        self.filter_coeff = np.zeros(self.bins_l)   
        
        
     #############################################################################
     # Get functions
     #############################################################################
     
-    def getInterpolatedFilter(self, dt) :
+    def computeInterpolatedFilter(self, dt) :
             
         """
         Given a particular dt, the function compute and return the support t and f(t).
@@ -103,9 +96,10 @@ class Filter_Rect_LogSpaced(Filter) :
                 filter_interpol[lb:ub] = self.filter_coeff[i]
     
             filter_interpol_support = np.arange(len(filter_interpol))*dt
-    
-            return (filter_interpol_support, filter_interpol)
-    
+            
+            self.filtersupport = filter_interpol_support
+            self.filter = filter_interpol
+                
         else :
             
             print "Error: value of the filter coefficients does not match the number of basis functions!"
@@ -125,14 +119,22 @@ class Filter_Rect_LogSpaced(Filter) :
         
     def getLength(self):
         
+        """
+        Return filter length (in ms).
+        """
+        
         return self.bins[-1]
 
         
     #############################################################################
-    # Functions to compute convolutions
+    # IMPLEMENTATION OF ABSTRACT METHODS USED TO COMPUTE CONVOLUTIONS
     #############################################################################
 
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
+        
+        """
+        Filter spike train spks with the set of rectangular basis functions defining the Filter.
+        """
         
         T_i     = int(T/dt)
                        
@@ -161,6 +163,10 @@ class Filter_Rect_LogSpaced(Filter) :
     
     
     def convolution_ContinuousSignal_basisfunctions(self, I, dt):
+        
+        """
+        Filter continuous input I with the set of rectangular basis functions defining the Filter.
+        """
         
         T_i     = len(I)
         
@@ -194,7 +200,7 @@ class Filter_Rect_LogSpaced(Filter) :
     def computeBins(self) :
         
         """
-        This function compute bins and support given the metaparameters.
+        This function compute log-spaced bins and support given the metaparameters.
         """
         
         self.bins = []
@@ -219,7 +225,7 @@ class Filter_Rect_LogSpaced(Filter) :
 
         """
         Set the parameters defining the rectangular basis functions.
-        Attention, each time meta parameters are changes, the value of the filer is reset to 0.
+        Each time meta parameters are changeD, the value of the filer is reset to 0.
         """
         
         self.p_length     = length                  # ms, filter length

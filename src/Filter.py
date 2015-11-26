@@ -13,15 +13,19 @@ from scipy.optimize import leastsq
 class Filter :
 
     """
-    Abstract class defining an interface for a filter (ex: spike-triggered current eta or spike-triggered threshold movement).
+    Abstract class defining an interface for a linear filter defined as a linear combination of basis functions {f_j(t)}.
     
-    This class define a function of time expanded using a set of basis functions {f_j(t)}.
+    Filters are useful to define e.g. a spike-triggered current, a spike-triggered threshold movement.
     
-    A filter h(t) is defined in the form h(t) = sum_j b_j*f_j(t), where b_j is a set 
-    of coefficient and f_j(t) is a set of rectangular basis functions.
+    A filter h(t) is defined in the form 
     
-    This class is used to define both the spike-triggered current eta(t) and the spike-triggered
-    movement of the firing threshold gamma(t) as well as other filters.
+        h(t) = sum_j b_j*f_j(t), 
+    
+    where b_j is a set of coefficient and f_j(t) is a set of rectangular basis functions (see e.g. Eq. 16 in Pozzorini et al. PLOS Comp. Biol. 2015).
+    
+    Depending on the circumstances different basis functions can be used (e.g., rectangular lin-spaced, rectangular log-spaced).
+    Note that this class does provide an implementation of basis functions. To do that, inherit from Filter and implement the abstract methods:
+    
     """
     
     __metaclass__  = abc.ABCMeta
@@ -29,13 +33,20 @@ class Filter :
 
     def __init__(self):
         
-        self.filter_coeff    = []              # values of coefficients b_j
+        self.filter_coeff    = []              # Values of coefficients b_j which define the amplitude of each basis function f_j.
     
-        # Results of multiexponential fit
+        self.filter          = 0               # array, interpolated filter
+        
+        self.filtersupport   = 0               # array, support of interpolatd filter (ie, time vector)
+        
+        
+        # Results of multiexponantial fit (these parameters are used to approximate the filter as a sum of exponentials)
+        
         self.expfit_falg     = False           # True if the exponential fit has been performed
-        self.b0              = []                                
-        self.tau0            = []
+        self.b0              = []              # list, Amplitudes of exponential functions 
+        self.tau0            = []              # list, Timescales of exponential functions
     
+
 
     ######################################################################
     # SET METHODS
@@ -45,7 +56,8 @@ class Filter :
     def setFilter_Coefficients(self, coeff):
 
         """
-        Function to set the coefficients b_j. Implementations of this function should check the consistency between
+        Set the coefficients b_j with the parameters provided in the array coeff.
+        Implementations of this function should guarantee the consistency between
         number of coefficients and number of basis functions.
         """
     
@@ -53,7 +65,7 @@ class Filter :
     def setFilter_Function(self, f):
         
         """
-        Given a function of time f(t), the filer is initialized accordingly.
+        Initialize the filter coefficients b_j to approximate a given function f.
         """    
 
            
@@ -66,20 +78,34 @@ class Filter :
         nbBasisFunctions = self.getNbOfBasisFunctions()
         self.filter_coeff = np.zeros(nbBasisFunctions)
         
+        
     ######################################################################
     # GET METHODS
     ######################################################################
     
     @abc.abstractmethod
+    def computeInterpolatedFilter(self, dt):
+        
+        """
+        Compute self.filter h(t) = sum_j b_j*f_j(t) with a given time resolution dt as well as its support self.supportfilter (i.e., time vector)
+        """        
+        
     def getInterpolatedFilter(self, dt) :
         
         """
-        Return the interpolated vector f(t). This function must return two arrays:
-        time : ms, support of f(t)
-        filter : the interpolated filter
+        Compute and return the interpolated filter as well as its support.
         """
+        
+        self.computeInterpolatedFilter(dt)
+        
+        return (self.filtersupport, self.filter)
+
 
     def getInterpolatedFilter_expFit(self, dt) :
+  
+        """
+        Return result of multiexponential fit to the interpolated filter.
+        """
   
         if self.expfit_falg :
   
@@ -95,7 +121,7 @@ class Filter :
     def getCoefficients(self) :
         
         """
-        Return an array that contains the parameters b_j. 
+        Return coefficients b_j that define the amplitude of each basis function.
         """
 
         return  self.filter_coeff
@@ -118,8 +144,9 @@ class Filter :
     def computeIntegral(self, dt):
         
         """
-        Return the duration (in ms) of the filter
+        Compute and return the integral of the interpolated filter.
         """
+        
         (t, F) = self.getInterpolatedFilter(dt)   
         return sum(F)*dt   
             
@@ -128,6 +155,10 @@ class Filter :
     ######################################################### 
          
     def convolution_ContinuousSignal(self, I, dt):
+        
+        """
+        Compute the return the convolutional integral between the an I and the Filter.
+        """
         
         (F_support, F) = self.getInterpolatedFilter(dt) 
     
@@ -144,6 +175,7 @@ class Filter :
     def convolution_SpikeTrain(self, spks, T, dt):
         
         """
+        Compute and return the convolutional integral between a spiking input spks of duration T and the Filter.
         spks  : in ms, spike times
         T     : in ms, duration of the experiment
         dt    : in ms, 
@@ -167,7 +199,7 @@ class Filter :
     def convolution_ContinuousSignal_basisfunctions(self, I, dt):
 
         """
-        Return matrix containing the result of the convolution integral between I and all basis functions that define the filter.
+        Return matrix containing the result of the convolutional integral between a continuous signla I and all basis functions that define the filter.
         """      
            
                   
@@ -175,8 +207,8 @@ class Filter :
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
         
         """
-        Given a list of spike times (spks, in ms) the function compute the convolution integral between
-        the spike train and the filter. T (in ms) denote the length of the experiment.
+        Return matrix containing the result of the convolutional integral between a spike train spks and all basis functions that define the filter.
+        
         If S(t) is the spike train defined by the spike times in spks, the function should return
         a set of N arrays a1, ..., aN with:
         a_i = int_0^t f_i(s)S(t-s)ds
@@ -189,6 +221,11 @@ class Filter :
             
     @classmethod
     def averageFilters(cls, Fs) :
+        
+        """
+        Class method that compute and return the average filter of a list of filters Fs.
+        Return an object of type Filter.   
+        """
         
         F_avg = copy.deepcopy(Fs[0])
                
@@ -224,6 +261,10 @@ class Filter :
     #########################################################
     def plot(self, dt=0.05) :
  
+        """
+        Plot filter.
+        """
+ 
         (t, F) = self.getInterpolatedFilter(dt)
         
         plt.figure(figsize=(5,5), facecolor='white')
@@ -246,6 +287,10 @@ class Filter :
 
     @classmethod
     def plotAverageFilter(cls, Fs, dt=0.05, loglog=False, label_x="Time (ms)", label_y="Filter", plot_expfit=True) :
+          
+        """
+        Class method to average and plot a list of filters Fs.
+        """
           
         plt.figure(figsize=(7,6), facecolor='white')
         
@@ -297,7 +342,7 @@ class Filter :
     def fitSumOfExponentials(self, dim, bs, taus, ROI=None, dt=0.1) :
         
         """
-        Fit the interpolated filter with a sum of exponentails: F_fit(t) = sum_j^N b_j exp(-t/tau_j)
+        Fit the interpolated filter self.filter with a sum of exponentails: F_fit(t) = sum_j^N b_j exp(-t/tau_j)
         dim : number N of exponentials
         bs  : list with initial conditions for amplitudes b_j
         taus: ms, list with initial conditions for timescales tau_j
@@ -306,6 +351,7 @@ class Filter :
         """
 
         (t, F) = self.getInterpolatedFilter(dt)
+                
         
         if ROI == None :
             t_fit = t
