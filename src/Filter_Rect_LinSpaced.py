@@ -2,10 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from Filter import *
+import Filter_Rect
+from Filter_Rect import *
 import Tools
 
 
-class Filter_Rect_LinSpaced(Filter) :
+class Filter_Rect_LinSpaced(Filter_Rect) :
 
     """
     This class defines a temporal filter defined as a linear combination of linearly-spaced rectangular basis functions.
@@ -19,112 +21,61 @@ class Filter_Rect_LinSpaced(Filter) :
 
     def __init__(self, length=1000.0, nbBins=30) :
         
-        Filter.__init__(self)
+        Filter_Rect.__init__(self)
         
         # Metaparameters
         
-        self.p_length     = length           # ms, filter length
-        self.p_nbBins     = nbBins           # integer, define the number of bins
+        self.p_length       = length         # ms, filter length
         
-        # Coefficients b_j that define the shape of the filter f(t)
+        self.filter_coeffNb = nbBins         # integer, define the number of rectangular basis functions being used
+           
         
-        #self.filter_coeff = np.zeros(1)     # values of bins
-        
-        # Auxiliary variables that can be computed using the parameters above               
-        self.bins    = []                    # ms, vector defining the rectangular basis functions for f(t)
-        self.support = []                    # ms, centers of bins used to define the filter 
-        
-        # Initialize        
+        # Initialize   
+             
         self.computeBins()                   # using meta parameters self.metaparam_subthreshold define bins and support.
+        
         self.setFilter_toZero()              # initialize filter to 0
  
- 
-    #############################################################################
-    # Set functions
-    #############################################################################
-    def setFilter_Function(self, f):
-        
-        """
-        Given a function of time f(t), the bins of the filer are initialized accordingly.
-        For example, if f(t) is an exponential function, the filter will approximate an exponential using rectangular basis functions
-        """
-        
-        self.computeBins() 
-        self.filter_coeff = f(self.support)
 
 
-    def setFilter_Coefficients(self, coeff):
-        
-        """
-        Set the coefficients of the filter (i.e. the values that define the magnitude of each rectangular function)
-        """
-        
-        self.computeBins() 
-        
-        if len(coeff) == self.p_nbBins :
-            self.filter_coeff = coeff
-        else :
-            print "Error, the number of coefficients do not match the number of basis functions!"
-        
-        
-     #############################################################################
-     # Get functions
-     #############################################################################
+    def setMetaParameters(self, length=1000.0, nbBins=10):
 
-    def computeInterpolatedFilter(self, dt) :
-            
         """
-        Given a particular dt, the function compute and return the support t and f(t).
+        Set the parameters defining the rectangular basis functions.
+        Attention, each time meta parameters are changes, the value of the filer is reset to 0.
         """
+
+        self.p_length = length         
+               
+        self.filter_coeffNb = nbBins
         
-        self.computeBins() 
+        self.computeBins()
                 
-        bins_i = Tools.timeToIndex(self.bins, dt)
+        self.setFilter_toZero()
+
         
-        if self.p_nbBins == len(self.filter_coeff) :
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter_Rect
+    ################################################################        
+
+    def computeBins(self) :
         
-            filter_interpol = np.zeros( (bins_i[-1] - bins_i[0])  )
-            
-            for i in range(len(self.filter_coeff)) :
+        """
+        This function compute self.bins and self.support given the metaparameters.
+        """
                 
-                lb = int(bins_i[i])
-                ub = int(bins_i[i+1])
-                filter_interpol[lb:ub] = self.filter_coeff[i]
-    
-            filter_interpol_support = np.arange(len(filter_interpol))*dt
-    
-            self.filtersupport = filter_interpol_support
-            self.filter = filter_interpol
-    
-        else :
-            
-            print "Error: value of the filter coefficients does not match the number of basis functions!"
+        self.bins    = np.linspace(0.0, self.p_length, self.filter_coeffNb+1) 
+        
+        self.computeSupport()
+        
+        self.filter_coeffNb = len(self.bins)-1
 
 
 
-    def getNbOfBasisFunctions(self) :
-        
-        """
-        Return the number of rectangular basis functions used to define the filter.
-        """
-        
-        self.computeBins() 
-        
-        return int(self.p_nbBins)
 
-
-    def getLength(self):
-        
-        """
-        Return length of the filter in ms.
-        """
-        
-        return self.bins[-1]
-    
-        
-    #############################################################################
-    # Functions to compute convolutions
-    #############################################################################
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter
+    ################################################################
 
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
         
@@ -186,38 +137,4 @@ class Filter_Rect_LinSpaced(Filter) :
             X[:,l] = np.array(F_star_I_shifted[:T_i], dtype='double')
     
         return X
-    
-
-    ########################################################################################
-    # AUXILIARY METHODS USED BY THIS PARTICULAR IMPLEMENTATION OF FILTER
-    ########################################################################################
-
-    def computeBins(self) :
-        
-        """
-        This function compute self.bins and self.support given the metaparameters.
-        """
-                
-        self.bins    = np.linspace(0.0, self.p_length, self.p_nbBins+1) 
-        self.support = np.array( [ (self.bins[i]+self.bins[i+1])/2 for i in range(len(self.bins)-1) ])
-
-
-
-    def setMetaParameters(self, length=1000.0, nbBins=10):
-
-        """
-        Set the parameters defining the rectangular basis functions.
-        Attention, each time meta parameters are changes, the value of the filer is reset to 0.
-        """
-
-        self.p_length = length                
-        self.p_nbBins = nbBins
-        
-        self.computeBins()
-        self.setFilter_toZero()
-        
-        
-
-        
-        
         

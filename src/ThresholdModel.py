@@ -20,7 +20,7 @@ class ThresholdModel(SpikingModel) :
     def simulateVoltageResponse(self, I, dt):
         
         """
-        Simulate the model and return:
+        Simulate the model response to an input current I and return:
         spks : list of spike times (in ms)
         V    : voltage trace (in mV)
         Vt   : voltage threshold trace (in mV)
@@ -29,6 +29,15 @@ class ThresholdModel(SpikingModel) :
     
     
     def computeRateAndThreshold_vs_I(self, mu, sigma, tau, dt, T, ROI, nbRep=10):
+
+        """
+        Compute standard FI curve using multiple OU processes with means mu (list), standard deviations sigma (list)
+        temporal correlation tau (in ms) and of duration T.
+        Use ROI to define the region of interest over which to compute the average firing rate. ROI can be usful when
+        one wants to evaluate the transient or the steady state FI.
+        This function also compute the theta-I curve, that the average value of the firing threshold as a function of the
+        input statistics.
+        """
 
         self.setDt(dt)
 
@@ -63,6 +72,7 @@ class ThresholdModel(SpikingModel) :
                     
                     theta_VT = np.mean(V_T[spiks_i_sel])
                     thetaI_VT_all[s_cnt, m_cnt, r] = theta_VT
+         
                                                             
         return (FI_all, thetaI_all, thetaI_VT_all)
 

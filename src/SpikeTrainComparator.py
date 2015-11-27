@@ -199,6 +199,7 @@ class SpikeTrainComparator :
     #######################################################################
     # FUNCTIONS FOR PLOTTING
     #######################################################################
+    
     def plotRaster(self, delta=10.0, dt=0.1):
         
         plt.figure(facecolor='white', figsize=(14,4))

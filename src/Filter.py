@@ -23,9 +23,10 @@ class Filter :
     
     where b_j is a set of coefficient and f_j(t) is a set of rectangular basis functions (see e.g. Eq. 16 in Pozzorini et al. PLOS Comp. Biol. 2015).
     
-    Depending on the circumstances different basis functions can be used (e.g., rectangular lin-spaced, rectangular log-spaced).
-    Note that this class does provide an implementation of basis functions. To do that, inherit from Filter and implement the abstract methods:
+    Filters can be used to filter a continuous function of time or a spike-train.
     
+    Depending on the circumstances different basis functions can be used (e.g., rectangular lin-spaced, rectangular log-spaced).
+    Note that this class does provide an implementation of basis functions. To do that, inherit from Filter and implement the abstract methods.   
     """
     
     __metaclass__  = abc.ABCMeta
@@ -35,61 +36,65 @@ class Filter :
         
         self.filter_coeff    = []              # Values of coefficients b_j which define the amplitude of each basis function f_j.
     
+        self.filter_coeffNb  = 0               # Nb of basis functions used to define the filter
+    
         self.filter          = 0               # array, interpolated filter
         
-        self.filtersupport   = 0               # array, support of interpolatd filter (ie, time vector)
+        self.filtersupport   = 0               # array, support of interpolated filter (ie, time vector)
         
         
         # Results of multiexponantial fit (these parameters are used to approximate the filter as a sum of exponentials)
         
         self.expfit_falg     = False           # True if the exponential fit has been performed
+        
         self.b0              = []              # list, Amplitudes of exponential functions 
+        
         self.tau0            = []              # list, Timescales of exponential functions
     
 
 
-    ######################################################################
-    # SET METHODS
-    ######################################################################
-    
-    @abc.abstractmethod    
-    def setFilter_Coefficients(self, coeff):
+    #####################################################################
+    # METHODS
+    #####################################################################
 
-        """
-        Set the coefficients b_j with the parameters provided in the array coeff.
-        Implementations of this function should guarantee the consistency between
-        number of coefficients and number of basis functions.
-        """
-    
-    @abc.abstractmethod
-    def setFilter_Function(self, f):
-        
-        """
-        Initialize the filter coefficients b_j to approximate a given function f.
-        """    
-
-           
     def setFilter_toZero(self):
        
         """
         Set all parameters b_j to zero.
         """    
         
-        nbBasisFunctions = self.getNbOfBasisFunctions()
-        self.filter_coeff = np.zeros(nbBasisFunctions)
-        
-        
-    ######################################################################
-    # GET METHODS
-    ######################################################################
-    
-    @abc.abstractmethod
-    def computeInterpolatedFilter(self, dt):
+        self.filter_coeff = np.zeros(self.filter_coeffNb)
+
+
+    def setFilter_Coefficients(self, coeff):
         
         """
-        Compute self.filter h(t) = sum_j b_j*f_j(t) with a given time resolution dt as well as its support self.supportfilter (i.e., time vector)
-        """        
+        Manually set the coefficients of the filter with coeff (i.e. the values that define the magnitude of each rectangular function).
+        """
+                
+        if len(coeff) == self.filter_coeffNb :
+            
+            self.filter_coeff = coeff
         
+        else :
+            
+            print "Error, the number of coefficients do not match the number of basis functions!"
+       
+
+    def getCoefficients(self) :
+        
+        """
+        Return coefficients b_j that define the amplitude of each basis function.
+        """
+
+        return  self.filter_coeff                
+
+
+    def getNbOfBasisFunctions(self) :
+                
+        return int(self.filter_coeffNb)
+
+
     def getInterpolatedFilter(self, dt) :
         
         """
@@ -117,30 +122,7 @@ class Filter :
         else :        
             print "Exp filter has not been performed."
     
-    
-    def getCoefficients(self) :
-        
-        """
-        Return coefficients b_j that define the amplitude of each basis function.
-        """
-
-        return  self.filter_coeff
-        
-
-    @abc.abstractmethod
-    def getNbOfBasisFunctions(self) :
-        
-        """
-        Return the number of basis functions used to define the filter.
-        """
-
-    @abc.abstractmethod
-    def getLength(self):
-        
-        """
-        Return the duration (in ms) of the filter
-        """
-              
+      
     def computeIntegral(self, dt):
         
         """
@@ -149,11 +131,8 @@ class Filter :
         
         (t, F) = self.getInterpolatedFilter(dt)   
         return sum(F)*dt   
+      
             
-    #########################################################
-    # Function to perform convolutions
-    ######################################################### 
-         
     def convolution_ContinuousSignal(self, I, dt):
         
         """
@@ -193,8 +172,101 @@ class Filter :
         return filtered_spks[:int(T/dt)]
 
 
+    def fitSumOfExponentials(self, dim, bs, taus, ROI=None, dt=0.1) :
+        
+        """
+        Fit the interpolated filter self.filter with a sum of exponentails: F_fit(t) = sum_j^N b_j exp(-t/tau_j)
+        dim : number N of exponentials
+        bs  : list with initial conditions for amplitudes b_j
+        taus: ms, list with initial conditions for timescales tau_j
+        ROI :[lb, ub], in ms (consistent with units of dt). Specify lowerbound and upperbound (in time) where fit is perfomred.
+        dt  : the filer is interpolated and fitted using discretization steps defined in dt.
+        """
 
+        (t, F) = self.getInterpolatedFilter(dt)
+                
+        
+        if ROI == None :
+            t_fit = t
+            F_fit = F
+        
+        else :
+            lb = int(ROI[0]/dt)
+            ub = int(ROI[1]/dt)
+            
+            t_fit = t[ lb : ub ]
+            F_fit = F[ lb : ub ]    
+            
+        p0 = np.concatenate((bs,taus))
+        
+        plsq = leastsq(Filter.multiExpResiduals, p0, args=(t_fit,F_fit,dim), maxfev=100000,ftol=0.00000001)
+        
+        p_opt = plsq[0]
+        bs_opt = p_opt[:dim]
+        taus_opt = p_opt[dim:]
+        
+        F_exp = Filter.multiExpEval(t, bs_opt, taus_opt)
+        
+        self.expfit_falg = True
+        self.b0          = bs_opt 
+        self.tau0        = taus_opt 
+                
+        return (t, F_exp)
+        
+      
+    def plot(self, dt=0.05):
+ 
+        """
+        Plot filter.
+        """
+ 
+        (t, F) = self.getInterpolatedFilter(dt)
+        
+        plt.figure(figsize=(5,5), facecolor='white')
+        plt.plot([t[0],t[-1]], [0.0,0.0], ':', color='black')
+        plt.plot(t, F, 'black', label='Filter')
+        
+        
+        if self.expfit_falg :
+            F_fit = Filter.multiExpEval(t, self.b0, self.tau0)
+            plt.plot(t, F_fit, 'red', label='Multiexp fit')
+        
+                
+        plt.xlim([t[0],t[-1]])
+        plt.legend()
+        plt.xlabel("Time")
+        plt.ylabel("Filter")
+        plt.show()        
+        
+    
+    
+    
+    
+    @abc.abstractmethod
+    def getLength(self):
+        
+        """
+        Return the duration (in ms) of the filter.
+        """
+      
+         
+    @abc.abstractmethod
+    def setFilter_Function(self, f):
+        
+        """
+        Initialize the filter coefficients b_j in such a way to approximate a function f provided as input parameter.
+        This function should define self.filter_coeffNb.
+        """    
+    
+        
+    @abc.abstractmethod
+    def computeInterpolatedFilter(self, dt):
+        
+        """
+        Compute the interpolated filter self.filter h(t) = sum_j b_j*f_j(t) with a given time resolution dt as well as its support self.supportfilter (i.e., time vector)
+        """        
 
+             
     @abc.abstractmethod                
     def convolution_ContinuousSignal_basisfunctions(self, I, dt):
 
@@ -215,10 +287,9 @@ class Filter :
         """
 
 
-    #########################################################
-    # Function to average filters
-    #########################################################
-            
+
+
+
     @classmethod
     def averageFilters(cls, Fs) :
         
@@ -254,35 +325,6 @@ class Filter :
             F_avg.taus = np.mean(all_tau, axis=0)                      
                                  
         return F_avg
-    
-    
-    #########################################################
-    # Functions for plotting
-    #########################################################
-    def plot(self, dt=0.05) :
- 
-        """
-        Plot filter.
-        """
- 
-        (t, F) = self.getInterpolatedFilter(dt)
-        
-        plt.figure(figsize=(5,5), facecolor='white')
-        plt.plot([t[0],t[-1]], [0.0,0.0], ':', color='black')
-        plt.plot(t, F, 'black', label='Filter')
-        
-        
-        if self.expfit_falg :
-            F_fit = Filter.multiExpEval(t, self.b0, self.tau0)
-            plt.plot(t, F_fit, 'red', label='Multiexp fit')
-        
-                
-        plt.xlim([t[0],t[-1]])
-        plt.legend()
-        plt.xlabel("Time")
-        plt.ylabel("Filter")
-        plt.show()        
-    
 
 
     @classmethod
@@ -335,52 +377,12 @@ class Filter :
         plt.ylabel(label_y)        
 
  
+ 
+    ######################################################################################
+    # FUNCTIONS TO PERFORM EXPONENTIAL FIT
+    ######################################################################################
 
-    #########################################################
-    # functions used to perform exp fit
-    #########################################################
-    def fitSumOfExponentials(self, dim, bs, taus, ROI=None, dt=0.1) :
-        
-        """
-        Fit the interpolated filter self.filter with a sum of exponentails: F_fit(t) = sum_j^N b_j exp(-t/tau_j)
-        dim : number N of exponentials
-        bs  : list with initial conditions for amplitudes b_j
-        taus: ms, list with initial conditions for timescales tau_j
-        ROI :[lb, ub], in ms (consistent with units of dt). Specify lowerbound and upperbound (in time) where fit is perfomred.
-        dt  : the filer is interpolated and fitted using discretization steps defined in dt.
-        """
-
-        (t, F) = self.getInterpolatedFilter(dt)
-                
-        
-        if ROI == None :
-            t_fit = t
-            F_fit = F
-        
-        else :
-            lb = int(ROI[0]/dt)
-            ub = int(ROI[1]/dt)
-            
-            t_fit = t[ lb : ub ]
-            F_fit = F[ lb : ub ]    
-            
-        p0 = np.concatenate((bs,taus))
-        
-        plsq = leastsq(Filter.multiExpResiduals, p0, args=(t_fit,F_fit,dim), maxfev=100000,ftol=0.00000001)
-        
-        p_opt = plsq[0]
-        bs_opt = p_opt[:dim]
-        taus_opt = p_opt[dim:]
-        
-        F_exp = Filter.multiExpEval(t, bs_opt, taus_opt)
-        
-        self.expfit_falg = True
-        self.b0          = bs_opt 
-        self.tau0        = taus_opt 
-                
-        return (t, F_exp)
-        
-        
+   
     @classmethod
     def multiExpResiduals(cls, p, x, y, d):
         bs = p[0:d]

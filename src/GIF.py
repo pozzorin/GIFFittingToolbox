@@ -14,21 +14,19 @@ from Tools import reprint
 class GIF(ThresholdModel) :
 
     """
-    Generalized Integrate and Fire model
+    Generalized Integrate and Fire model defined in Pozzorini et al. PLOS Comp. Biol. 2015
+    
     Spike are produced stochastically with firing intensity:
     
     lambda(t) = lambda0 * exp( (V(t)-V_T(t))/DV ),
-    
     
     where the membrane potential dynamics is given by:
     
     C dV/dt = -gl(V-El) + I - sum_j eta(t-\hat t_j)
     
-    
     and the firing threshold V_T is given by:
     
     V_T = Vt_star + sum_j gamma(t-\hat t_j)
-    
     
     and \hat t_j denote the spike times.
     """
@@ -55,12 +53,6 @@ class GIF(ThresholdModel) :
         self.gamma   = Filter_Rect_LogSpaced()    # mV, spike-triggered movement of the firing threshold (must be instance of class Filter)
         
         
-        # Varialbes relatd to fit
-        
-        self.avg_spike_shape = 0
-        self.avg_spike_shape_support = 0
-        
-        
         # Initialize the spike-triggered current eta with an exponential function        
         
         def expfunction_eta(x):
@@ -77,10 +69,13 @@ class GIF(ThresholdModel) :
         self.gamma.setFilter_Function(expfunction_gamma)        
         
               
-            
-    ########################################################################################################
-    # SET DT FOR NUMERICAL SIMULATIONS (KERNELS ARE REINTERPOLATED EACH TIME DT IS CHANGED)
-    ########################################################################################################    
+        # Variables related to fitting procedure
+        
+        self.avg_spike_shape = 0
+        self.avg_spike_shape_support = 0
+        
+    
+    
     def setDt(self, dt):
 
         """
@@ -91,8 +86,10 @@ class GIF(ThresholdModel) :
 
     
     ########################################################################################################
-    # FUNCTIONS FOR SIMULATIONS
+    # IMPLEMENT ABSTRACT METHODS OF Spiking model
     ########################################################################################################
+    
+    
     def simulateSpikingResponse(self, I, dt):
         
         """
@@ -107,6 +104,11 @@ class GIF(ThresholdModel) :
         return spks_times
 
 
+    ########################################################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Threshold Model
+    ########################################################################################################
+    
+    
     def simulateVoltageResponse(self, I, dt) :
 
         self.setDt(dt)
@@ -115,7 +117,12 @@ class GIF(ThresholdModel) :
         
         return (spks_times, V, V_T)
 
-       
+
+    ########################################################################################################
+    # METHODS FOR NUMERICAL SIMULATIONS
+    ########################################################################################################  
+      
+
     def simulate(self, I, V0):
  
         """
@@ -243,9 +250,12 @@ class GIF(ThresholdModel) :
         
         """
         Simulate the subthresohld response of the GIF model to an input current I (nA) with time step dt.
-        Adaptation currents are enforced at times specified in the list spks (in ms) given as an argument to the function.
-        V0 indicate the initial condition V(0)=V0.
+        Adaptation currents are forces to accur at times specified in the list spks (in ms) given as an argument
+        to the function.
+        V0 indicate the initial condition V(t=0)=V0.
+        
         The function returns:
+        
         - time     : ms, support for V, eta_sum, V_T, spks
         - V        : mV, membrane potential
         - eta_sum  : nA, adaptation current
@@ -335,14 +345,18 @@ class GIF(ThresholdModel) :
         eta_sum = eta_sum[:p_T]     
 
         return (time, V, eta_sum)
-        
-        
-     
+
+           
+    ########################################################################################################
+    # METHODS FOR MODEL FITTING
+    ########################################################################################################  
+      
+         
     def fit(self, experiment, DT_beforeSpike = 5.0):
         
         """
         Fit the GIF model on experimental data.
-        The experimental data are stored in the object experiment.
+        The experimental data are stored in the object experiment provided as an input.
         The parameter DT_beforeSpike (in ms) defines the region that is cut before each spike when fitting the subthreshold dynamics of the membrane potential.
         Only training set traces in experiment are used to perform the fit.
         """
@@ -366,9 +380,13 @@ class GIF(ThresholdModel) :
     ########################################################################################################
     # FIT VOLTAGE RESET GIVEN ABSOLUTE REFRACOTORY PERIOD (step 1)
     ########################################################################################################
+
+
     def fitVoltageReset(self, experiment, Tref, do_plot=False):
         
         """
+        Implement Step 1 of the fitting procedure introduced in Pozzorini et al. PLOS Comb. Biol. 2015
+        experiment: Experiment object on which the model is fitted.
         Tref: ms, absolute refractory period. 
         The voltage reset is estimated by computing the spike-triggered average of the voltage.
         """
@@ -413,15 +431,26 @@ class GIF(ThresholdModel) :
     # FUNCTIONS RELATED TO FIT OF SUBTHRESHOLD DYNAMICS (step 2)
     ########################################################################################################
 
+
     def fitSubthresholdDynamics(self, experiment, DT_beforeSpike=5.0):
-                    
+          
+        """
+        Implement Step 2 of the fitting procedure introduced in Pozzorini et al. PLOS Comb. Biol. 2015
+        The voltage reset is estimated by computing the spike-triggered average of the voltage.
+        experiment: Experiment object on which the model is fitted.
+        DT_beforeSpike: in ms, data right before spikes are excluded from the fit. This parameter can be used to define that time interval.
+        """  
+                  
         print "\nGIF MODEL - Fit subthreshold dynamics..." 
             
         # Expand eta in basis functions
         self.dt = experiment.dt
         self.eta.computeBins()
         
-        # Build X matrix and Y vector to perform linear regression (use all traces in training set)            
+        
+        # Build X matrix and Y vector to perform linear regression (use all traces in training set)    
+        # For each training set an X matrix and a Y vector is built.   
+        ####################################################################################################
         X = []
         Y = []
     
@@ -434,6 +463,7 @@ class GIF(ThresholdModel) :
                 cnt += 1
                 reprint( "Compute X matrix for repetition %d" % (cnt) )          
                 
+                # Compute the the X matrix and Y=\dot_V_data vector used to perform the multilinear linear regression (see Eq. 17.18 in Pozzorini et al. PLOS Comp. Biol. 2015)
                 (X_tmp, Y_tmp) = self.fitSubthresholdDynamics_Build_Xmatrix_Yvector(tr, DT_beforeSpike=DT_beforeSpike)
      
                 X.append(X_tmp)
@@ -441,6 +471,7 @@ class GIF(ThresholdModel) :
     
     
         # Concatenate matrixes associated with different traces to perform a single multilinear regression
+        ####################################################################################################
         if cnt == 1:
             X = X[0]
             Y = Y[0]
@@ -453,7 +484,9 @@ class GIF(ThresholdModel) :
             print "\nError, at least one training set trace should be selected to perform fit."
         
         
-        # Linear Regression
+        # Perform linear Regression defined in Eq. 17 of Pozzorini et al. PLOS Comp. Biol. 2015
+        ####################################################################################################
+        
         print "\nPerform linear regression..."
         XTX     = np.dot(np.transpose(X), X)
         XTX_inv = inv(XTX)
@@ -462,23 +495,28 @@ class GIF(ThresholdModel) :
         b       = b.flatten()
    
    
-        # Update and print model parameters  
+        # Extract explicit model parameters from regression result b
+        ####################################################################################################
+
         self.C  = 1./b[1]
         self.gl = -b[0]*self.C
         self.El = b[2]*self.C/self.gl
         self.eta.setFilter_Coefficients(-b[3:]*self.C)
     
+    
         self.printParameters()   
         
         
         # Compute percentage of variance explained on dV/dt
-        
+        ####################################################################################################
+
         var_explained_dV = 1.0 - np.mean((Y - np.dot(X,b))**2)/np.var(Y)
         print "Percentage of variance explained (on dV/dt): %0.2f" % (var_explained_dV*100.0)
 
         
-        # Compute percentage of variance explained on V
-        
+        # Compute percentage of variance explained on V (see Eq. 26 in Pozzorini et al. PLOS Comp. Biol. 2105)
+        ####################################################################################################
+
         SSE = 0     # sum of squared errors
         VAR = 0     # variance of data
         
@@ -497,18 +535,28 @@ class GIF(ThresholdModel) :
         var_explained_V = 1.0 - SSE / VAR
         
         print "Percentage of variance explained (on V): %0.2f" % (var_explained_V*100.0)
+                
                     
-
     def fitSubthresholdDynamics_Build_Xmatrix_Yvector(self, trace, DT_beforeSpike=5.0):
-                   
+           
+        """
+        Compute the X matrix and the Y vector (i.e. \dot_V_data) used to perfomr the linear regression 
+        defined in Eq. 17-18 of Pozzorini et al. 2015 for an individual experimental trace provided as parameter.
+        The input parameter trace is an ojbect of class Trace.
+        """
+                
         # Length of the voltage trace       
         Tref_ind = int(self.Tref/trace.dt)
         
-        # Select region where to perform linear regression
+        
+        # Select region where to perform linear regression (specified in the ROI of individual taces)
+        ####################################################################################################
         selection = trace.getROI_FarFromSpikes(DT_beforeSpike, self.Tref)
         selection_l = len(selection)
         
-        # Build X matrix for linear regression
+        
+        # Build X matrix for linear regression (see Eq. 18 in Pozzorini et al. PLOS Comp. Biol. 2015)
+        ####################################################################################################
         X = np.zeros( (selection_l, 3) )
         
         # Fill first two columns of X matrix        
@@ -516,18 +564,14 @@ class GIF(ThresholdModel) :
         X[:,1] = trace.I[selection]
         X[:,2] = np.ones(selection_l) 
         
-             
+       
         # Compute and fill the remaining columns associated with the spike-triggered current eta               
         X_eta = self.eta.convolution_Spiketrain_basisfunctions(trace.getSpikeTimes() + self.Tref, trace.T, trace.dt) 
         X = np.concatenate( (X, X_eta[selection,:]), axis=1 )
 
 
-        # Build Y vector (voltage derivative)    
-        
-        # COULD BE A BETTER SOLUTION IN CASE OF EXPERIMENTAL DATA (NOT CLEAR WHY)
-        #Y = np.array( np.concatenate( ([0], np.diff(trace.V)/trace.dt) ) )[selection]
-        
-        # CORRECT SOLUTION TO FIT ARTIFICIAL DATA
+        # Build Y vector (voltage derivative \dot_V_data)    
+        ####################################################################################################
         Y = np.array( np.concatenate( (np.diff(trace.V)/trace.dt, [0]) ) )[selection]      
 
         return (X, Y)
@@ -536,19 +580,28 @@ class GIF(ThresholdModel) :
         
     ########################################################################################################
     # FUNCTIONS RELATED TO FIT FIRING THRESHOLD PARAMETERS (step 3)
-    ########################################################################################################
-        
-    
+    ########################################################################################################        
+ 
+         
     def fitStaticThreshold(self, experiment):
+        
+        """
+        Implement Step 3 of the fitting procedure introduced in Pozzorini et al. PLOS Comb. Biol. 2015
+        Instead of directly fitting a dynamic threshold, this function just fit a constant threshold.
+        The output of this fit can be used as a smart initial condition to fit the full GIF model (i.e.,
+        a model featuting a spike-triggered current gamma). See Pozzorini et al. PLOS Comp. Biol. 2015
+        experiment: Experiment object on which the model is fitted.
+        """
+
+        print "\nGIF MODEL - Fit static threshold...\n"
+
         
         self.setDt(experiment.dt)
     
-        # Start by fitting a constant firing threshold, the result is used as initial condition to fit dynamic threshold
-        
-        print "\nGIF MODEL - Fit static threshold...\n"
-        
+            
         # Define initial conditions (based on the average firing rate in the training set)
-        
+        ###############################################################################################
+       
         nbSpikes = 0
         duration = 0
         
@@ -566,31 +619,49 @@ class GIF(ThresholdModel) :
         self.Vt_star = -np.log(mean_firingrate)*self.DV
 
 
-        # Perform fit     
+        # Perform maximum likelihood fit (Newton method)    
+        ###############################################################################################
+
         beta0_staticThreshold = [1/self.DV, -self.Vt_star/self.DV] 
         beta_opt = self.maximizeLikelihood(experiment, beta0_staticThreshold, self.buildXmatrix_staticThreshold) 
             
-        # Store result  
+            
+        # Store result of constnat threshold fitting  
+        ###############################################################################################
+        
         self.DV      = 1.0/beta_opt[0]
         self.Vt_star = -beta_opt[1]*self.DV 
         self.gamma.setFilter_toZero()
         
         self.printParameters()
 
-      
+   
     def fitThresholdDynamics(self, experiment):
-                        
-        self.setDt(experiment.dt)
-    
-        # Fit a dynamic threshold using a initial condition the result obtained by fitting a static threshold
+                  
+        """
+        Implement Step 3 of the fitting procedure introduced in Pozzorini et al. PLOS Comb. Biol. 2015
+        Fit firing threshold dynamics by solving Eq. 20 using Newton method.
+        
+        experiment: Experiment object on which the model is fitted.
+        """        
         
         print "\nGIF MODEL - Fit dynamic threshold...\n"
         
-        # Perform fit        
+        
+        self.setDt(experiment.dt)
+  
+        
+        # Perform maximum likelihood fit (Newton method) 
+        ###############################################################################################
+   
+        # Define initial conditions
         beta0_dynamicThreshold = np.concatenate( ( [1/self.DV], [-self.Vt_star/self.DV], self.gamma.getCoefficients()/self.DV))        
         beta_opt = self.maximizeLikelihood(experiment, beta0_dynamicThreshold, self.buildXmatrix_dynamicThreshold)
+
         
         # Store result
+        ###############################################################################################
+        
         self.DV      = 1.0/beta_opt[0]
         self.Vt_star = -beta_opt[1]*self.DV 
         self.gamma.setFilter_Coefficients(-beta_opt[2:]*self.DV)
@@ -600,21 +671,36 @@ class GIF(ThresholdModel) :
       
     def maximizeLikelihood(self, experiment, beta0, buildXmatrix, maxIter=10**3, stopCond=10**-6) :
     
+        ###
+        ### THIS IMPLEMENTATION IS NOT SO COOL :(
+        ### IN NEW VERSION OF THE CODE I SHOULD IMPLEMENT A NEW CLASS THAT TAKES CARE OF MAXLIKELIHOOD ON lambda=exp(Xbeta) model
+        ###
+        
         """
         Maximize likelihood. This function can be used to fit any model of the form lambda=exp(Xbeta).
-        Here this function is used to fit both:
+        This function is used to fit both:
         - static threshold
         - dynamic threshold
         The difference between the two functions is in the size of beta0 and the returned beta, as well
         as the function buildXmatrix.
         """
         
-        # Precompute all the matrices used in the gradient ascent
+        # Precompute all the matrices used in the gradient ascent (see Eq. 20 in Pozzorini et al. 2015)
+        ################################################################################################
         
-        all_X        = []
+        # here X refer to the matrix made of y vectors defined in Eq. 21 (Pozzorini et al. 2015)
+        # since the fit can be perfomed on multiple traces, we need lists
+        all_X        = []           
+        
+        # similar to X but only contains temporal samples where experimental spikes have been observed 
+        # storing this matrix is useful to improve speed when computing the likelihood as well as its derivative
         all_X_spikes = []
+        
+        # sum X_spikes over spikes. Precomputing this quantity improve speed when the gradient is evaluated
         all_sum_X_spikes = []
         
+        
+        # variables used to compute the loglikelihood of a Poisson process spiking at the experimental firing rate
         T_tot = 0.0
         N_spikes_tot = 0.0
         
@@ -629,7 +715,8 @@ class GIF(ThresholdModel) :
                 # Simulate subthreshold dynamics 
                 (time, V_est, eta_sum_est) = self.simulateDeterministic_forceSpikes(tr.I, tr.V[0], tr.getSpikeTimes())
                              
-                # Precomputes matrices to perform gradient ascent on log-likelihood
+                # Precomputes matrices to compute gradient ascent on log-likelihood
+                # depeinding on the model being fitted (static vs dynamic threshodl) different buildXmatrix functions can be used
                 (X_tmp, X_spikes_tmp, sum_X_spikes_tmp, N_spikes, T) = buildXmatrix(tr, V_est) 
                     
                 T_tot        += T
@@ -639,10 +726,15 @@ class GIF(ThresholdModel) :
                 all_X_spikes.append(X_spikes_tmp)
                 all_sum_X_spikes.append(sum_X_spikes_tmp)
         
+        # Compute log-likelihood of a poisson process (this quantity is used to normalize the model log-likelihood)
+        ################################################################################################
+        
         logL_poisson = N_spikes_tot*(np.log(N_spikes_tot/T_tot)-1)
 
-        # Perform gradient ascent
 
+        # Perform gradient ascent
+        ################################################################################################
+    
         print "Maximize log-likelihood (bit/spks)..."
                         
         beta = beta0
@@ -652,15 +744,25 @@ class GIF(ThresholdModel) :
             
             learning_rate = 1.0
             
-            if i<=10 :                      # be careful in the first iterations (using a small learning rate in the first step makes the fit more stable)
+            # In the first iterations using a small learning rate makes things somehow more stable
+            if i<=10 :                      
                 learning_rate = 0.1
             
             
             L=0; G=0; H=0;  
-                
+               
             for trace_i in np.arange(traces_nb):
+                
+                # compute log-likelihood, gradient and hessian on a specific trace (note that the fit is performed on multiple traces)
                 (L_tmp,G_tmp,H_tmp) = self.computeLikelihoodGradientHessian(beta, all_X[trace_i], all_X_spikes[trace_i], all_sum_X_spikes[trace_i])
-                L+=L_tmp; G+=G_tmp; H+=H_tmp;
+                
+                # note that since differentiation is linear: gradient of sum = sum of gradient ; hessian of sum = sum of hessian
+                L+=L_tmp; 
+                G+=G_tmp; 
+                H+=H_tmp;
+            
+            
+            # Update optimal parametes (ie, implement Newton step) by tacking into account multiple traces
             
             beta = beta - learning_rate*np.dot(inv(H),G)
                 
@@ -676,6 +778,7 @@ class GIF(ThresholdModel) :
             reprint(L_norm)
     
         if (i==maxIter - 1) :                                           # If too many iterations
+            
             print "\nNot converged after %d iterations.\n" % (maxIter)
 
 
@@ -683,6 +786,11 @@ class GIF(ThresholdModel) :
      
         
     def computeLikelihoodGradientHessian(self, beta, X, X_spikes, sum_X_spikes) : 
+        
+        """
+        Compute the log-likelihood, its gradient and hessian for a model whose 
+        log-likelihood has the same form as the one defined in Eq. 20 (Pozzorini et al. PLOS Comp. Biol. 2015)
+        """
         
         # IMPORTANT: in general we assume that the lambda_0 = 1 Hz
         # The parameter lambda0 is redundant with Vt_star, so only one of those has to be fitted.
@@ -694,13 +802,13 @@ class GIF(ThresholdModel) :
         Xbeta           = np.dot(X,beta)
         expXbeta        = np.exp(Xbeta)
 
-        # Compute likelihood (would be nice to improve this to get a normalized likelihood)
+        # Compute loglikelihood defined in Eq. 20 Pozzorini et al. 2015
         L = sum(X_spikesbeta) - self.lambda0*dt*sum(expXbeta)
                                        
-        # Compute gradient
+        # Compute its gradient
         G = sum_X_spikes - self.lambda0*dt*np.dot(np.transpose(X), expXbeta)
         
-        # Compute Hessian
+        # Compute its Hessian
         H = -self.lambda0*dt*np.dot(np.transpose(X)*expXbeta, X)
         
         return (L,G,H)
@@ -710,8 +818,11 @@ class GIF(ThresholdModel) :
 
         """
         Use this function to fit a model in which the firing threshold dynamics is defined as:
-        V_T(t) = Vt_star (i.e., no spike-triggered movement of the firing threshold)
+        V_T(t) = Vt_star (i.e., no spike-triggered movement of the firing threshold).
+        This function computes the matrix X made of vectors y simlar to the ones defined in Eq. 21 (Pozzorini et al. 2015).
+        In contrast ot Eq. 21, the X matrix computed here does not include the columns related to the spike-triggered threshold movement.
         """        
+        
         # Get indices be removing absolute refractory periods (-self.dt is to not include the time of spike)       
         selection = tr.getROI_FarFromSpikes(-self.dt, self.Tref )
         T_l_selection  = len(selection)
@@ -732,8 +843,10 @@ class GIF(ThresholdModel) :
         X[:,0]  = V_est[selection]
         X[:,1]  = np.ones(T_l_selection)
         
+        # Select time steps in which the neuron has emitted a spike
         X_spikes = X[spks_i_afterselection,:]
-                
+            
+        # Sum X_spike over spikes    
         sum_X_spikes = np.sum( X_spikes, axis=0)
         
         return (X, X_spikes, sum_X_spikes, N_spikes, T_l)
@@ -744,6 +857,7 @@ class GIF(ThresholdModel) :
         """
         Use this function to fit a model in which the firing threshold dynamics is defined as:
         V_T(t) = Vt_star + sum_i gamma(t-\hat t_i) (i.e., model with spike-triggered movement of the threshold)
+        This function computes the matrix X made of vectors y defined as in Eq. 21 (Pozzorini et al. 2015).
         """
            
         # Get indices be removing absolute refractory periods (-self.dt is to not include the time of spike)       
@@ -770,11 +884,10 @@ class GIF(ThresholdModel) :
         X_gamma = self.gamma.convolution_Spiketrain_basisfunctions(tr.getSpikeTimes() + self.Tref, tr.T, tr.dt)
         X = np.concatenate( (X, X_gamma[selection,:]), axis=1 )
   
-        # Precompute other quantities
+        # Precompute other quantities to speedup fitting
         X_spikes = X[spks_i_afterselection,:]
         sum_X_spikes = np.sum( X_spikes, axis=0)
-        
-                
+                     
         return (X, X_spikes, sum_X_spikes,  N_spikes, T_l)
  
  
@@ -782,9 +895,13 @@ class GIF(ThresholdModel) :
     ########################################################################################################
     # PLOT AND PRINT FUNCTIONS
     ########################################################################################################     
-  
+        
         
     def plotParameters(self) :
+        
+        """
+        Generate figure with model filters.
+        """
         
         plt.figure(facecolor='white', figsize=(14,4))
             
@@ -832,13 +949,17 @@ class GIF(ThresholdModel) :
       
     def printParameters(self):
 
+        """
+        Print model parameters on terminal.
+        """
+
         print "\n-------------------------"        
         print "GIF model parameters:"
         print "-------------------------"
         print "tau_m (ms):\t%0.3f"  % (self.C/self.gl)
         print "R (MOhm):\t%0.3f"    % (1.0/self.gl)
         print "C (nF):\t\t%0.3f"    % (self.C)
-        print "gl (nS):\t%0.3f"     % (self.gl)
+        print "gl (nS):\t%0.6f"     % (self.gl)
         print "El (mV):\t%0.3f"     % (self.El)
         print "Tref (ms):\t%0.3f"   % (self.Tref)
         print "Vr (mV):\t%0.3f"     % (self.Vr)     
@@ -957,8 +1078,7 @@ class GIF(ThresholdModel) :
         
         plt.show()
     
-
-       
+ 
     @classmethod
     def plotAverageModel(cls, GIFs):
 
@@ -1060,7 +1180,7 @@ class GIF(ThresholdModel) :
         plt.ylabel('Spike-triggered threshold (mV)')  
  
       
-         # R
+        # R
         #######################################################################################################
     
         plt.subplot(4,6,12+1)

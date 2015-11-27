@@ -2,10 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from Filter import *
+from Filter_Rect import *
 import Tools
 
 
-class Filter_Rect_ArbitrarilySpaced(Filter) :
+class Filter_Rect_ArbitrarilySpaced(Filter_Rect) :
 
     """
     This class define a function of time expanded using a set of arbitrarily rectangular basis functions.
@@ -19,106 +20,55 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
 
     def __init__(self, bins=np.array([0.0,10.0,50.0,100.0,1000.0])) :
         
-        Filter.__init__(self)
-        
-        # Metaparameters
-        
-        self.p_length     = bins[-1]         # ms, filter length
-        self.p_nbBins     = len(bins)        # integer, define the number of bins
-        
-        
-        # Auxiliary variables that can be computed using the parameters above   
-                    
-        self.bins    = []                    # ms, vector defining the rectangular basis functions for f(t)
-        self.support = []                    # ms, centers of bins used to define the filter 
-        
+        Filter_Rect.__init__(self)        
+               
         # Initialize    
             
         self.bins = bins 
-        self.computeSupport()                    
+        
+        self.filter_coeffNb = len(bins)-1
+        
+        self.computeSupport()      
+                      
         self.setFilter_toZero()              # initialize filter to 0
  
- 
-    #############################################################################
-    # Set functions
-    #############################################################################
-    def setFilter_Function(self, f):
-        
-        """
-        Given a function of time f(t), the bins of the filer are initialized accordingly.
-        For example, if f(t) is an exponential function, the filter will approximate an exponential using rectangular basis functions
-        """
-        
-        self.filter_coeff = f(self.support)
 
 
-    def setFilter_Coefficients(self, coeff):
+
+    def setBasisFunctions(self, bins):
+
+        """
+        Set the parameters defining the rectangular basis functions.
+        Attention, each time meta parameters are changes, the value of the filer is reset to 0.
+        """
+
+        self.bins = np.array(bins)
         
-        """
-        Set the coefficients of the filter (i.e. the values that define the magnitude of each rectangular function)
-        """
+        self.computeSupport()
+
+        self.filter_coeffNb = len(bins)-1
                 
-        if len(coeff) == self.p_nbBins :
-            self.filter_coeff = coeff
-        else :
-            print "Error, the number of coefficients do not match the number of basis functions!"
+        self.setFilter_toZero()
         
         
-     #############################################################################
-     # Get functions
-     #############################################################################
+        
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter_Rect
+    ################################################################
 
-    def computeInterpolatedFilter(self, dt) :
-            
-        """
-        Given a particular dt, the function compute and return the support t and f(t).
-        """
-                
-        bins_i = Tools.timeToIndex(self.bins, dt)
-        
-        if self.p_nbBins == len(self.filter_coeff) :
-        
-            filter_interpol = np.zeros( (bins_i[-1] - bins_i[0])  )
-            
-            for i in range(len(self.filter_coeff)) :
-                
-                lb = int(bins_i[i])
-                ub = int(bins_i[i+1])
-                filter_interpol[lb:ub] = self.filter_coeff[i]
-    
-            filter_interpol_support = np.arange(len(filter_interpol))*dt
-    
-            self.filtersupport = filter_interpol_support
-            self.filter = filter_interpol
-        
-        else :
-            
-            print "Error: value of the filter coefficients does not match the number of basis functions!"
-
-
-
-    def getNbOfBasisFunctions(self) :
+    def computeBins(self):
         
         """
-        Return the number of rectangular basis functions used to define the filter.
-        """
-                
-        return int(self.p_nbBins)
-
-
-    def getLength(self):
-        
-        """
-        Return length of the filter in ms.
+        This filter implementation does not have metaparameters. Filters are direcly set and don't need to be computed.
         """
         
-        return self.bins[-1]
-    
-        
-    #############################################################################
-    # Implement abstract methods used to compute filter convolution
-    #############################################################################
+        pass
 
+
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter
+    ################################################################
+        
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
         
         
@@ -172,36 +122,7 @@ class Filter_Rect_ArbitrarilySpaced(Filter) :
         return X
     
 
-    ########################################################################################
-    # AUXILIARY METHODS USED BY THIS PARTICULAR IMPLEMENTATION OF FILTER
-    ########################################################################################
 
-    def computeBins(self):
-        
-        pass
-
-
-    def computeSupport(self):
-        
-        self.support = np.array( [ (self.bins[i]+self.bins[i+1])/2 for i in range(len(self.bins)-1) ])
-
-        
-
-    def setBasisFunctions(self, bins):
-
-        """
-        Set the parameters defining the rectangular basis functions.
-        Attention, each time meta parameters are changes, the value of the filer is reset to 0.
-        """
-
-        self.p_length = bins[-1]                
-        self.p_nbBins = len(bins)-1
-        
-        self.bins = np.array(bins)
-        self.computeSupport()
-        self.setFilter_toZero()
-        
-        
 
         
         

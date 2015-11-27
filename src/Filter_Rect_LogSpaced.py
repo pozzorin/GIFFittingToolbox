@@ -3,133 +3,95 @@ import numpy as np
 
 from scipy.signal import fftconvolve
 import Tools
+
 from Filter import *
+from Filter_Rect import *
 
-
-class Filter_Rect_LogSpaced(Filter) :
+class Filter_Rect_LogSpaced(Filter_Rect) :
 
     """
     This class defines a temporal filter defined as a linear combination of log-spaced rectangular basis functions.
-    A filter f(t) is defined in the form 
-    
-    f(t) = sum_j b_j*rect_j(t),
-    
-    where b_j is a set of coefficient and rect_j is a set of log-spaced rectangular basis functions,
-    meaning that the width of the rectangular basis functions increase exponentially (log-spacing).
     """
 
     def __init__(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0):
         
-        Filter.__init__(self)
+        Filter_Rect.__init__(self)
         
         # Metaparamters
         
         self.p_length     = length           # ms, filter length
+        
         self.p_binsize_lb = binsize_lb       # ms, min size for bin
+        
         self.p_binsize_ub = binsize_ub       # ms, max size for bin
-        self.p_slope      = slope            # exponent for log-scale binning  
+        
+        self.p_slope      = slope            # exponent for log-scaling  
         
         
-        # Auxiliary variables that can be computed using the parameters above        
-                
-        self.bins    = []                    # ms, vector defining the rectangular basis functions for f(t)
-        self.support = []                    # ms, centers of bins used to define the filter
-        self.bins_l  = 0                     # nb of bins used to define the filter 
-        
-        # Initialize        
+        # Initialize      
+          
         self.computeBins()                   # using meta parameters self.metaparam_subthreshold define bins and support.
+        
         self.setFilter_toZero()              # initialize filter to 0
      
-     
-    #############################################################################
-    # Set functions
-    #############################################################################
+
+
+    def setMetaParameters(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0):
+
+        """
+        Set the parameters defining the rectangular basis functions.
+        Each time meta parameters are changeD, the value of the filer is reset to 0.
+        """
+        
+        self.p_length     = length                  # ms, filter length
+        
+        self.p_binsize_lb = binsize_lb              # ms, min size for bin
+        
+        self.p_binsize_ub = binsize_ub              # ms, max size for bin
+        
+        self.p_slope      = slope                   # exponent for log-scale binning  
+        
+        self.computeBins()
+        
+        self.setFilter_toZero()                     # initialize filter to 0
+                
     
-    def setFilter_Function(self, f):
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter_Rect
+    ################################################################
+               
+    def computeBins(self) :
         
         """
-        Given a function of time f(t), the bins of the filer are initialized accordingly.
-        For example, if f(t) is an exponential function, the filter will approximate an exponential using rectangular basis functions.
+        This function compute log-spaced bins and support given the metaparameters.
         """
         
-        self.computeBins() 
-        self.filter_coeff = f(self.support)
-
-
-    def setFilter_Coefficients(self, coeff):
+        self.bins = []
+        self.bins.append(0)
         
-        """
-        Manually set the coefficients of the filter with coeff (i.e. the values that define the magnitude of each rectangular function).
-        """
+        cnt = 1
+        total_length = 0
         
-        self.computeBins() 
-        
-        if len(coeff) == self.bins_l :
-            self.filter_coeff = coeff
-        else :
-            print "Error, the number of coefficients do not match the number of basis functions!"
-        
-       
-       
-    #############################################################################
-    # Get functions
-    #############################################################################
+        while (total_length <= self.p_length) :  
+            tmp = min( self.p_binsize_lb*np.exp(cnt/self.p_slope), self.p_binsize_ub )
+            total_length = total_length + tmp
+            self.bins.append( total_length )
     
-    def computeInterpolatedFilter(self, dt) :
-            
-        """
-        Given a particular dt, the function compute and return the support t and f(t).
-        """
-
-        self.computeBins() 
-                
-        bins_i = Tools.timeToIndex(self.bins, dt)
-                
-        if self.getNbOfBasisFunctions() == len(self.filter_coeff) :
-        
-            filter_interpol = np.zeros( (bins_i[-1] - bins_i[0])  )
-            
-            for i in range(len(self.filter_coeff)) :
-                
-                lb = int(bins_i[i])
-                ub = int(bins_i[i+1])
-                filter_interpol[lb:ub] = self.filter_coeff[i]
+            cnt+=1
     
-            filter_interpol_support = np.arange(len(filter_interpol))*dt
-            
-            self.filtersupport = filter_interpol_support
-            self.filter = filter_interpol
-                
-        else :
-            
-            print "Error: value of the filter coefficients does not match the number of basis functions!"
-
-
-
-    def getNbOfBasisFunctions(self) :
+        self.bins = np.array(self.bins)
         
-        """
-        Return the number of rectangular basis functions used to define the filter.
-        """
+        self.computeSupport()
         
-        self.computeBins() 
-        
-        return int(self.bins_l)
-        
-        
-    def getLength(self):
-        
-        """
-        Return filter length (in ms).
-        """
-        
-        return self.bins[-1]
+        self.filter_coeffNb = len(self.bins)-1
 
         
-    #############################################################################
-    # IMPLEMENTATION OF ABSTRACT METHODS USED TO COMPUTE CONVOLUTIONS
-    #############################################################################
+        
 
+    ################################################################
+    # IMPLEMENT ABSTRACT METHODS OF Filter
+    ################################################################
+        
     def convolution_Spiketrain_basisfunctions(self, spks, T, dt):
         
         """
@@ -161,7 +123,6 @@ class Filter_Rect_LogSpaced(Filter) :
         return X
     
     
-    
     def convolution_ContinuousSignal_basisfunctions(self, I, dt):
         
         """
@@ -191,50 +152,4 @@ class Filter_Rect_LogSpaced(Filter) :
         
         
         return X
-    
-    
-    ########################################################################################
-    # AUXILIARY METHODS USED BY THIS PARTICULAR IMPLEMENTATION OF FILTER
-    ########################################################################################
-
-    def computeBins(self) :
-        
-        """
-        This function compute log-spaced bins and support given the metaparameters.
-        """
-        
-        self.bins = []
-        self.bins.append(0)
-        
-        cnt = 1
-        total_length = 0
-        
-        while (total_length <= self.p_length) :  
-            tmp = min( self.p_binsize_lb*np.exp(cnt/self.p_slope), self.p_binsize_ub )
-            total_length = total_length + tmp
-            self.bins.append( total_length )
-    
-            cnt+=1
-    
-        self.bins = np.array(self.bins)
-        self.support = np.array( [ (self.bins[i]+self.bins[i+1])/2 for i in range(len(self.bins)-1) ])
-        self.bins_l = len(self.bins)-1
-
-
-    def setMetaParameters(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0):
-
-        """
-        Set the parameters defining the rectangular basis functions.
-        Each time meta parameters are changeD, the value of the filer is reset to 0.
-        """
-        
-        self.p_length     = length                  # ms, filter length
-        self.p_binsize_lb = binsize_lb              # ms, min size for bin
-        self.p_binsize_ub = binsize_ub              # ms, max size for bin
-        self.p_slope      = slope                    # exponent for log-scale binning  
-        
-        self.computeBins()
-        self.setFilter_toZero()
-        
-        
         

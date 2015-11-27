@@ -107,10 +107,12 @@ class AEC_Badel(AEC) :
 
         # Build full X matrix
         X = self.K_opt.convolution_ContinuousSignal_basisfunctions(I_dot, dt)
+                
         nbPoints = int(self.p_pctPoints*ROI_selection_l)
         
         # Estimate electrode filter on multiple repetitions by bootstrapping      
         for rep in np.arange(self.p_nbRep) :
+              
               
             ############################################
             # ESTIMATE OPTIMAL LINEAR FILETR K_opt
@@ -137,6 +139,7 @@ class AEC_Badel(AEC) :
             K_opt_tmp = copy.deepcopy(self.K_opt)
             K_opt_tmp.setFilter_Coefficients(K_opt_coeff)
             
+            
             # Store bootstrap repetiton
             self.K_opt_all.append(K_opt_tmp)
             
@@ -154,7 +157,7 @@ class AEC_Badel(AEC) :
 
             # Store the bootstrap repetition
             self.K_e_all.append(Ke_tmp)
-            print "Repetition ", (rep+1), " R_e (MOhm) = %0.2f, " % (Ke_tmp.computeIntegral(dt))
+            print "Repetition ", (rep+1), " R_e (MOhm) = %0.2f" % (Ke_tmp.computeIntegral(dt))
 
         # Compute final filter by averaging the filters obtained via bootstrap 
         self.K_opt = Filter.averageFilters(self.K_opt_all)

@@ -7,6 +7,7 @@ from Experiment import *
 from AEC_Badel import *
 from GIF import *
 from Filter_Rect_LogSpaced import *
+from Filter_Rect_LinSpaced import *
 
 import Tools
 import matplotlib.pyplot as plt
@@ -38,8 +39,8 @@ myExp.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1016.ibw', 1.0, PATH + 'Cell3_G
 myExp.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1017.ibw', 1.0, PATH + 'Cell3_Ger1Test_ch3_1017.ibw', 1.0, 20000.0, FILETYPE='Igor')
 
 # Plot data
-myExp.plotTrainingSet()
-myExp.plotTestSet()
+#myExp.plotTrainingSet()
+#myExp.plotTestSet()
 
 
 ############################################################################################################
@@ -96,36 +97,36 @@ myGIF.fit(myExp, DT_beforeSpike=5.0)
 myGIF.printParameters()
 myGIF.plotParameters()   
 
-# Save the model
-myGIF.save('./myGIF.pck')
+## Save the model
+#myGIF.save('./myGIF.pck')
 
 
 ############################################################################################################
 # STEP 3A (OPTIONAL): PLAY A BIT WITH THE FITTED MODEL
 ############################################################################################################
-"""
-# Reload the model
-myGIF = GIF.load('./myGIF.pck')
 
-# Generate OU process with temporal correlation 3 ms and mean modulated by a sinusoildal function of 1 Hz
-I_OU = Tools.generateOUprocess_sinMean(f=1.0, T=5000.0, tau=3.0, mu=0.3, delta_mu=0.5, sigma=0.1, dt=0.1)
+## Reload the model
+#myGIF = GIF.load('./myGIF.pck')
+#
+## Generate OU process with temporal correlation 3 ms and mean modulated by a sinusoildal function of 1 Hz
+#I_OU = Tools.generateOUprocess_sinMean(f=1.0, T=5000.0, tau=3.0, mu=0.3, delta_mu=0.5, sigma=0.1, dt=0.1)
+#
+## Simulate the model with the I_OU current. Use the reversal potential El as initial condition (i.e., V(t=0)=El)
+#(time, V, I_a, V_t, S) = myGIF.simulate(I_OU, myGIF.El)
+#
+## Plot the results of the simulation
+#plt.figure(figsize=(14,5), facecolor='white')
+#plt.subplot(2,1,1)
+#plt.plot(time, I_OU, 'gray')
+#plt.ylabel('I (nA)')
+#plt.subplot(2,1,2)
+#plt.plot(time, V,'black', label='V')
+#plt.plot(time, V_t,'red', label='V threshold')
+#plt.ylabel('V (mV)')
+#plt.xlabel('Time (ms)')
+#plt.legend()
+#plt.show()
 
-# Simulate the model with the I_OU current. Use the reversal potential El as initial condition (i.e., V(t=0)=El)
-(time, V, I_a, V_t, S) = myGIF.simulate(I_OU, myGIF.El)
-
-# Plot the results of the simulation
-plt.figure(figsize=(14,5), facecolor='white')
-plt.subplot(2,1,1)
-plt.plot(time, I_OU, 'gray')
-plt.ylabel('I (nA)')
-plt.subplot(2,1,2)
-plt.plot(time, V,'black', label='V')
-plt.plot(time, V_t,'red', label='V threshold')
-plt.ylabel('V (mV)')
-plt.xlabel('Time (ms)')
-plt.legend()
-plt.show()
-"""
 
 
 ############################################################################################################

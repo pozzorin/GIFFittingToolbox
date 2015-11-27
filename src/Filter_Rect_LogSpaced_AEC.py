@@ -10,16 +10,10 @@ from Filter import *
 class Filter_Rect_LogSpaced_AEC(Filter_Rect_LogSpaced) :
 
     """
-    This class define a function of time expanded using log-spaced rectangular basis functions.
-    A filter f(t) is defined in the form 
-    
-    f(t) = sum_j b_j*rect_j(t)
-    
-    where b_j is a set of coefficient and rect_j is a set of rectangular basis functions.
-    The width of the rectangular basis functions increase exponentially (log-spacing).
-    
-    Using the metaparameter p_clamp_period, one can force the first rectangular basis functions 
-    to have a specific size. Meaning that log-spacing only starts later.
+    This class define a function of time expanded using log-spaced rectangular basis functions.    
+    Using the metaparameter p_clamp_period, one can force the rectangular basis functions covering
+    the first p_clamp_period ms to have a to have a specific size binsize_lb. 
+    Log-spacing only starts after p_clamp_period.
     """
     
     def __init__(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0, clamp_period=1.0):
@@ -34,12 +28,29 @@ class Filter_Rect_LogSpaced_AEC(Filter_Rect_LogSpaced) :
         # Initialize    
             
         self.computeBins()                   # using meta parameters self.metaparam_subthreshold define bins and support.
+        
         self.setFilter_toZero()              # initialize filter to 0
      
-         
-    ########################################################################################
-    # AUXILIARY METHODS USED BY THIS PARTICULAR IMPLEMENTATION OF FILTER
-    ########################################################################################
+
+    ################################################################
+    # OVERVRITE METHODS OF Filter_Rect_LogSpaced
+    ################################################################
+    
+    def setMetaParameters(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0, clamp_period=10.0):
+        
+        # Set metaparameters inherited from  Filter_Rect_LogSpaced 
+        
+        super(Filter_Rect_LogSpaced_AEC, self).setMetaParameters(length=length, binsize_lb=binsize_lb, binsize_ub=binsize_ub, slope=slope)
+        
+        
+        # Set paramters which are specific to this class
+        
+        self.p_clamp_period   = clamp_period
+                
+        self.computeBins()
+            
+        self.setFilter_toZero()
+
     
     def computeBins(self) :
         
@@ -67,18 +78,10 @@ class Filter_Rect_LogSpaced_AEC(Filter_Rect_LogSpaced) :
             cnt+=1
     
         self.bins = np.array(self.bins)
-        self.support = np.array( [ (self.bins[i]+self.bins[i+1])/2 for i in range(len(self.bins)-1) ])
-        self.bins_l = len(self.bins)-1
-
-
-
-    def setMetaParameters(self, length=1000.0, binsize_lb=2.0, binsize_ub=1000.0, slope=7.0, clamp_period=10.0):
-       
-        super(Filter_Rect_LogSpaced_AEC, self).setMetaParameters(length=length, binsize_lb=binsize_lb, binsize_ub=binsize_ub, slope=slope)
-        self.p_clamp_period   = clamp_period
-                
-        self.computeBins()
-        self.setFilter_toZero()
+        
+        self.computeSupport()
+        
+        self.filter_coeffNb = len(self.bins)-1
         
 
         

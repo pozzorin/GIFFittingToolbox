@@ -122,10 +122,10 @@ class Trace :
     def getROI_FarFromSpikes(self, DT_before, DT_after):
 
         """
-        Return indices of the trace which are in ROI. Exclute all datapoints which are close to a spike.
+        Return indices of the trace which are in ROI. Exclude all datapoints which are close to a spike.
         DT_before: ms
         DT_after: ms
-        These two parameters define the region to cut around spikes.
+        These two parameters define the region to cut around each spike.
         """
         
         L = len(self.V)
@@ -378,6 +378,10 @@ class Trace :
     #################################################################################################    
     
     def getTime(self):
+        
+        """
+        Get time vector (i.e., the temporal support of the arrays: I, V, etc)
+        """
         
         return np.arange(int(self.T/self.dt))*self.dt        
 

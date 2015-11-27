@@ -9,10 +9,10 @@ import Tools
 class SpikingModel :
 
     """
-    Abstract class defining an interface for Spiking Neuron Model.
+    Abstract class defining an interface for a Spiking Neuron Model, a model that produces spikes.
     Inherit from this class to generate a new Spiking Neuron Model.
     To create a new model that explicitly describe the membrane potential and the voltage threshold,
-    see the ThresholdModel class.
+    see the class ThreshodlModel.
     """
     
     __metaclass__  = abc.ABCMeta
@@ -22,15 +22,20 @@ class SpikingModel :
     def simulateSpikingResponse(self, I, dt):
         
         """
-        Return spike times (in ms) in response to an input current I(t). 
+        Return an array containing the spike times (in ms) evoked by an input current I(t). 
         Dt define the sampling frequency at which the simulation is performed.
         """
    
-
-
+   
     def computeFIcurve(self, mu, sigma, tau, dt, T, ROI, nbRep=10):
 
-        
+        """
+        Compute standard FI curve using multiple OU processes with means mu (list), standard deviations sigma (list)
+        temporal correlation tau (in ms) and of duration T.
+        Use ROI to define the region of interest over which to compute the average firing rate. ROI can be usful when
+        one wants to evaluate the transient or the steady state FI.
+        """
+
         FI_all = np.zeros((len(sigma),len(mu),nbRep))
         
         s_cnt = -1
