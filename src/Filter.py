@@ -288,8 +288,6 @@ class Filter :
 
 
 
-
-
     @classmethod
     def averageFilters(cls, Fs) :
         

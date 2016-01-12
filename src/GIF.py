@@ -445,7 +445,6 @@ class GIF(ThresholdModel) :
             
         # Expand eta in basis functions
         self.dt = experiment.dt
-        self.eta.computeBins()
         
         
         # Build X matrix and Y vector to perform linear regression (use all traces in training set)    
