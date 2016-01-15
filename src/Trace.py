@@ -54,7 +54,7 @@ class Trace :
 
         if FILETYPE=='Array' :
                     
-            self.V_rec = np.array(V[:int(T/self.dt)])*I_units/10**-3        # set mV
+            self.V_rec = np.array(V[:int(T/self.dt)])*V_units/10**-3        # set mV
             self.I     = np.array(I[:int(T/self.dt)])*I_units/10**-9        # set nA 
 
 
