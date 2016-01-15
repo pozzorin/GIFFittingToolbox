@@ -18,7 +18,6 @@ class Experiment :
     Objects of this class have an AEC object that can be used to perform Active Electrode Compensation for data preprocessing.
     """
     
-    
     def __init__(self, name, dt):
         
         """
