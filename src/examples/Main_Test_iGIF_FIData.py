@@ -48,27 +48,7 @@ stochastic process as the test set.
 # SETP 1: LOAD EXPERIMENTAL TRACES
 #################################################################################################
 
-# Define which data to load and use for the fit.
-#
-# The experimental data consists of 3 long injections (i.e. 3 repetitions of the experiment).
-# Each of this injection consists of 4 * 8 = 32 steps of current.
-# Each step of current is generated using an Ornstein-Uhlenbeck process with mean_I and sigma_I.
-# - 8 different values of mean_I were considered.
-# - 4 different values of sigma_I were considered.
-# In each repetition, the order of the steps was randomly shuffled and a new realization of the OU process was used.
-# More details on the experimental protocol can be found in Mensi et al.PLOS Comp. Biol. 2016.
-#
-# Data are stored at the following path:
-#
 PATH = '../../data/fi/'
-# 
-# in a .mat file called FI_DATA_170413A3.mat and have already been preprocessed with AEC
-# using the method discussed in Mensi et al. PLOS Comp. Biol. 2016.
-#
-# Test set data are stored in separate .ibw files and have not yet been preprocessed with AEC.
-# Since in this script the test dataset is only used to compute Md*, AEC is not needed and raw data
-# can be directly used.
-
 
 # Load training set traces (prestored in an object Experiment)
 experiment = Experiment.load(PATH + "FIdata.pkl")
