@@ -70,41 +70,9 @@ PATH = '../../data/fi/'
 # can be directly used.
 
 
-# Select the data from the FI protocol that will be used for the fit:
-#
-mm      = [ 0,1,2,3,4,5,6,7 ]  # select which mean input mu_I (between 0-7: from 0 nA to mu_max, cell dependent)
-ss      = [ 1,2,3 ]            # select which standard deviation sigma_I (between (0-3: from 0nA to 150 pA)
-rr      = [ 1 ]                # select which repetitions (between 0-2)
+# Load training set traces (prestored in an object Experiment)
+experiment = Experiment.load(PATH + "FIdata.pkl")
 
-
-# Load experimental data and create an object experiment
-
-data = io.loadmat(PATH + 'FI_DATA_170413A3.mat')
-data = data['Data']
-dt   = data['dt'][0][0][0][0]
-
-experiment = Experiment('Fit to FI data', dt)
-
-# loop on standard deviations sigma_I (ie, amplitude of input fluctuations)
-for s in ss :   
-      
-    # loop on repetitions (at each repetition, a new realization of the OU process was used, 
-    # so these are not frozen noise repetitions)  
-    for r in rr :
-           
-        # loop over means mu_I (ie., DC component of the current)
-        for m in mm :
-            
-            # Load the input current and the voltage recording associated with a repetition 
-            # and a particular mean and standard deviation (mu_I, sigma_I)
-            
-            V_tmp = data['V_traces'][0][0][s][r][m][-55000:]
-            I_tmp = data['I_traces'][0][0][s][r][m][-55000:]                        
-            
-            tr = experiment.addTrainingSetTrace(V_tmp, 10**-3, I_tmp, 10**-9, 5500.0, FILETYPE='Array')
-
-      
-# Load test set data to evaluate the model performance
 
 # Load test set data
 experiment.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1009.ibw', 1.0, PATH + 'Cell3_Ger1Test_ch3_1009.ibw', 1.0, 20000.0, FILETYPE='Igor')
@@ -117,8 +85,7 @@ experiment.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1015.ibw', 1.0, PATH + 'Ce
 experiment.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1016.ibw', 1.0, PATH + 'Cell3_Ger1Test_ch3_1016.ibw', 1.0, 20000.0, FILETYPE='Igor')
 experiment.addTestSetTrace(PATH + 'Cell3_Ger1Test_ch2_1017.ibw', 1.0, PATH + 'Cell3_Ger1Test_ch3_1017.ibw', 1.0, 20000.0, FILETYPE='Igor')
 
-    
-        
+       
 #################################################################################################
 # STEP 2: PERFORM ACTIVE ELECTRODE COMPENSATION
 #################################################################################################
@@ -198,7 +165,7 @@ iGIF_NP_fit.fit(experiment, theta_inf_nbbins=theta_inf_nbbins, theta_tau_all=the
 
 iGIF_NP_fit.plotParameters()  
 
-    
+
 ###################################################################################################
 # STEP 3C: FIT iGIF_Na (Mensi et al. 2016 with current-based spike-triggered adaptation)
 ###################################################################################################
@@ -263,3 +230,4 @@ for i in np.arange(len(models)) :
 ###################################################################################################
 
 iGIF.compareModels([iGIF_NP_fit, iGIF_Na_fit], labels=['iGIF_NP', 'iGIF_Na'])
+
