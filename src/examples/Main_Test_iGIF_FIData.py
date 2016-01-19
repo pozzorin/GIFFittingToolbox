@@ -127,7 +127,7 @@ GIF_fit.gamma.setMetaParameters(length=4000.0, binsize_lb=5.0, binsize_ub=1000.0
 
 GIF_fit.fit(experiment, DT_beforeSpike = 5.0)
 
-GIF_fit.plotParameters()   
+#GIF_fit.plotParameters()   
 
 
 #################################################################################################
@@ -169,7 +169,7 @@ iGIF_NP_fit.plotParameters()
 ###################################################################################################
 # STEP 3C: FIT iGIF_Na (Mensi et al. 2016 with current-based spike-triggered adaptation)
 ###################################################################################################
-
+"""
 # Note that in the iGIF_Na model introduced in Mensi et al. 2016, the adaptation current is
 # conductance-based (i.e., eta is a spike-triggered conductance).
 
@@ -184,7 +184,7 @@ Vi_BRUTEFORCE_RESOLUTION = 10                    # number of parameters V_i cons
 
 # Create new iGIF_Na model that will be used for the fit
 
-iGIF_Na_fit       = iGIF_Na(dt)                    
+iGIF_Na_fit       = iGIF_Na(experiment.dt)                    
 iGIF_Na_fit.Tref  = GIF_fit.Tref                 # use the same absolute refractory period as in GIF_fit
 iGIF_Na_fit.eta   = copy.deepcopy(GIF_fit.eta)   # use the same basis function as in GIF_fit for eta (filer coeff will be refitted)
 iGIF_Na_fit.gamma = copy.deepcopy(GIF_fit.gamma) # use the same basis function as in GIF_fit for gamma (filer coeff will be refitted)
@@ -230,4 +230,4 @@ for i in np.arange(len(models)) :
 ###################################################################################################
 
 iGIF.compareModels([iGIF_NP_fit, iGIF_Na_fit], labels=['iGIF_NP', 'iGIF_Na'])
-
+"""
