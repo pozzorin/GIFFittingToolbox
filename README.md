@@ -11,4 +11,4 @@ The first paper introduces an experimental protocol and a set of computational t
 
 In the second paper, the GIF model and the fitting procedure described in Pozzorini et al. 2015 are extended. A new model, called inactivating Generalized Integrate-and-Fire (iGIF), is introduced that captures the spiking activity of single neurons over an broad range of input statistics.
 
-Instructions on how to use the code and fit GIF models to data can be found on the wiki.
+Instructions on how to use the code and fit GIF models to data can be found on the wiki. Some examples are provided in src/examples.
