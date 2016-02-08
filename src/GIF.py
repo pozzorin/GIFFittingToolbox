@@ -9,6 +9,9 @@ from ThresholdModel import *
 from Filter_Rect_LogSpaced import *
 
 from Tools import reprint
+from numpy import nan, NaN
+
+import math
 
 
 class GIF(ThresholdModel) :
@@ -775,6 +778,10 @@ class GIF(ThresholdModel) :
             # The likelihood is normalized with respect to a poisson process and units are in bit/spks
             L_norm = (L-logL_poisson)/np.log(2)/N_spikes_tot
             reprint(L_norm)
+            
+            if math.isnan(L_norm):
+                print "Problem during gradient ascent. Optimizatino stopped."
+                break
     
         if (i==maxIter - 1) :                                           # If too many iterations
             
