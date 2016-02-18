@@ -319,6 +319,7 @@ class Trace :
         return self.spks*self.dt
 
 
+
     def getSpikeIndices(self):
         
         """
@@ -331,6 +332,21 @@ class Trace :
     def getSpikeNb(self):
         
         return len(self.spks)
+
+
+
+    def getSpikeNbInROI(self):
+        
+        """
+        Return number of spikes in region of interest.
+        """
+        
+        ROI_ind = self.getROI()
+        spike_train = self.getSpikeTrain()
+        
+        return sum(spike_train[ROI_ind])
+        
+        
 
 
     #################################################################################################

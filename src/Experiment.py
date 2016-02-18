@@ -286,7 +286,28 @@ class Experiment :
         """
         
         return len(self.trainingset_traces) 
-      
+
+
+    def getTrainingSetNbOfSpikes(self):
+        
+        """
+        Return the number of spikes in the training set data (only consider ROI)
+        """
+        
+        nbSpksTot  = 0
+        
+        for tr in self.trainingset_traces :
+            
+            if tr.useTrace :
+            
+                nbSpksTot += tr.getSpikeNbInROI()
+            
+           
+            
+        return nbSpksTot
+        
+        
+            
 
       
     ############################################################################################

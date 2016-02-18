@@ -990,7 +990,7 @@ class GIF(ThresholdModel) :
         cnt = 0
         for GIF in GIFs :
             
-            print "Model: " + labels[cnt]          
+            #print "Model: " + labels[cnt]          
             GIF.printParameters()
             cnt+=1
 
@@ -1077,6 +1077,7 @@ class GIF(ThresholdModel) :
         plt.plot([gamma_support[0], gamma_support[-1]], [0,0], ls=':', color='black', lw=2, zorder=-1)   
       
         plt.xlim([gamma_support[0]+0.1, gamma_support[-1]])
+        plt.ylim([-100,100])
         plt.xlabel('Time (ms)')
         plt.ylabel('Gamma (mV)')   
 
