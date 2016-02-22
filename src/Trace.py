@@ -280,15 +280,17 @@ class Trace :
         ROI_ind = self.getROI()
 
         for s in self.spks :
-            
+                        
             # Only spikes in ROI are used
             if s in ROI_ind :
                 
                 # Avoid using spikes close to boundaries to avoid errors             
                 if s > DT_before_i  and s < (len(self.V) - DT_after_i) :
                     all_spikes.append( self.V[ s - DT_before_i : s + DT_after_i ] )
+
     
         spike_avg = np.mean(all_spikes, axis=0)
+        
         support   = np.linspace(-DT_before, DT_after, len(spike_avg))
         spike_nb  = len(all_spikes)
         

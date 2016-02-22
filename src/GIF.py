@@ -125,7 +125,6 @@ class GIF(ThresholdModel) :
     # METHODS FOR NUMERICAL SIMULATIONS
     ########################################################################################################  
       
-
     def simulate(self, I, V0):
  
         """
