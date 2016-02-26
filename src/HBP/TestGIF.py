@@ -33,7 +33,7 @@ I0_max = 0.5
 I0_all = np.random.rand(50)*I0_max
 
 I = []
-
+I.append(np.zeros(T/dt))
 for I0 in I0_all :
     I.append(I0*np.ones(int(T/dt)))
 
@@ -54,7 +54,7 @@ myGIF.gamma.setFilter_Timescales([5.0, 200.0, 250.0])
 myGIF.gamma.setFilter_Coefficients([15.0, 3.0, 1.0])
 
 # Simulate model response
-(time, V, eta_sum, V_T, spks) = myGIF.simulate_seed(I, V0, seed)
+(time, V, eta_sum, V_T, spks, rnd, l) = myGIF.simulate_seed(I, V0, seed)
 
 
 # PLOT MODEL RESPNOSE
@@ -83,3 +83,5 @@ print dic['model']
 np.savetxt('./GIFtest_I.txt', I, delimiter=',')
 np.savetxt('./GIFtest_V.txt', V, delimiter=',')
 np.savetxt('./GIFtest_s.txt', spks, delimiter=',')
+np.savetxt('./GIFtest_rnd.txt', rnd, delimiter=',')
+np.savetxt('./GIFtest_l.txt', l, delimiter=',')

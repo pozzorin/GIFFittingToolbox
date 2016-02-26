@@ -675,7 +675,7 @@ class GIF_HT(GIF) :
 
         return beta
 
-    def simulate_seed(self, I, V0, seed):
+    def simulate_seed(self, I, V0, seed=1, u_vec=False):
 
         """
         Simulate the spiking response of the GIF model to an input current I (nA) with time step dt.
@@ -702,10 +702,9 @@ class GIF_HT(GIF) :
         p_DV        = self.DV
         p_lambda0   = self.lambda0
 
-        # seed can be a vector of values
-        if hasattr(seed, "__len__"): # seed is a vector
-            urand = seed
-
+        # random values can be given directly
+        if hasattr(u_vec, "__len__"): # u_vec is a vector
+            urand = u_vec
         else:
             np.random.seed(seed)
             urand = np.random.uniform(0,1,p_T)
@@ -725,6 +724,8 @@ class GIF_HT(GIF) :
         V = np.array(np.zeros(p_T), dtype="double")
         I = np.array(I, dtype="double")
         spks = np.array(np.zeros(p_T), dtype="double")
+        rnd = np.array(np.zeros(p_T), dtype="double")
+        l = np.array(np.zeros(p_T), dtype="double")
         eta_sum = np.array(np.zeros(p_T + 2*p_eta_l), dtype="double")
         gamma_sum = np.array(np.zeros(p_T + 2*p_gamma_l), dtype="double")
 
@@ -764,11 +765,13 @@ class GIF_HT(GIF) :
 
                     // COMPUTE PROBABILITY OF EMITTING ACTION POTENTIAL
                     lambda = lambda0*exp( (V[t+1]-Vt_star-gamma_sum[t])/DeltaV );
+                    l[t+1] = lambda;
                     p_dontspike = exp(-lambda*(dt/1000.0));                                  // since lambda0 is in Hz, dt must also be in Hz (this is why dt/1000.0)
 
 
                     // PRODUCE SPIKE STOCHASTICALLY
                     r = urand[t];
+                    rnd[t+1] = r;
 
                     if (r > p_dontspike) {
 
@@ -796,9 +799,9 @@ class GIF_HT(GIF) :
 
                 """
 
-        vars = [ 'p_T','p_dt','p_gl','p_C','p_El','p_Vr','p_Tref','p_Vt_star','p_DV','p_lambda0','V','I','p_eta','p_eta_l','eta_sum','p_gamma','gamma_sum','p_gamma_l','spks','urand' ]
+        vars = [ 'l', 'rnd', 'urand', 'p_T','p_dt','p_gl','p_C','p_El','p_Vr','p_Tref','p_Vt_star','p_DV','p_lambda0','V','I','p_eta','p_eta_l','eta_sum','p_gamma','gamma_sum','p_gamma_l','spks' ]
 
-        v = weave.inline(code, vars, verbose=2)
+        v = weave.inline(code, vars)
 
         time = np.arange(p_T)*self.dt
 
@@ -807,7 +810,7 @@ class GIF_HT(GIF) :
 
         spks = (np.where(spks==1)[0])*self.dt
 
-        return (time, V, eta_sum, V_T, spks)
+        return (time, V, eta_sum, V_T, spks, rnd, l)
 
 
     def getResultDictionary(self):

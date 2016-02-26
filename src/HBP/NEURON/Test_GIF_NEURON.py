@@ -93,11 +93,10 @@ myGIF.gamma.setFilter_Timescales([5.0, 200.0, 250.0])
 myGIF.gamma.setFilter_Coefficients([15.0, 3.0, 1.0])
 
 # Simulate model response
-(time, V, eta_sum, V_T, spks) = myGIF.simulate_seed(I, V0, hurand)
+(time, V, eta_sum, V_T, spks, rnd, l) = myGIF.simulate_seed(I, V0, u_vec=hurand)
 
 
 # COMPARE MODELS
-
 #prediction = SpikeTrainComparator(T_test, all_spks_times_testset, all_spks_times_prediction)
 
 
