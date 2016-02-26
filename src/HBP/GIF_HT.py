@@ -717,6 +717,8 @@ class GIF_HT(GIF) :
         V = np.array(np.zeros(p_T), dtype="double")
         I = np.array(I, dtype="double")
         spks = np.array(np.zeros(p_T), dtype="double")                      
+        rnd = np.array(np.zeros(p_T), dtype="double")   
+        l = np.array(np.zeros(p_T), dtype="double")   
         eta_sum = np.array(np.zeros(p_T + 2*p_eta_l), dtype="double")
         gamma_sum = np.array(np.zeros(p_T + 2*p_gamma_l), dtype="double")            
  
@@ -760,11 +762,13 @@ class GIF_HT(GIF) :
                
                     // COMPUTE PROBABILITY OF EMITTING ACTION POTENTIAL
                     lambda = lambda0*exp( (V[t+1]-Vt_star-gamma_sum[t])/DeltaV );
+                    l[t+1] = lambda;
                     p_dontspike = exp(-lambda*(dt/1000.0));                                  // since lambda0 is in Hz, dt must also be in Hz (this is why dt/1000.0)
                           
                           
                     // PRODUCE SPIKE STOCHASTICALLY
                     r = rand()/rand_max;
+                    rnd[t+1] = r;
                     if (r > p_dontspike) {
                                         
                         if (t+1 < T_ind-1)                
@@ -789,7 +793,7 @@ class GIF_HT(GIF) :
                 
                 """
  
-        vars = [ 'p_seed', 'p_T','p_dt','p_gl','p_C','p_El','p_Vr','p_Tref','p_Vt_star','p_DV','p_lambda0','V','I','p_eta','p_eta_l','eta_sum','p_gamma','gamma_sum','p_gamma_l','spks' ]
+        vars = [ 'l', 'rnd', 'p_seed', 'p_T','p_dt','p_gl','p_C','p_El','p_Vr','p_Tref','p_Vt_star','p_DV','p_lambda0','V','I','p_eta','p_eta_l','eta_sum','p_gamma','gamma_sum','p_gamma_l','spks' ]
         
         v = weave.inline(code, vars)
 
@@ -800,7 +804,7 @@ class GIF_HT(GIF) :
      
         spks = (np.where(spks==1)[0])*self.dt
     
-        return (time, V, eta_sum, V_T, spks)
+        return (time, V, eta_sum, V_T, spks, rnd, l)
 
      
     def getResultDictionary(self):
