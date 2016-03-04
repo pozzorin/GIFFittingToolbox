@@ -1,4 +1,3 @@
-
 : Generalized Integrate and Fire model defined in Pozzorini et al. PLOS Comp. Biol. 2015
 : Filter for eta and gamma defined as linear combination of three exponential functions each.
 :
@@ -6,7 +5,7 @@
 
 
 NEURON {
-    POINT_PROCESS gif
+    POINT_PROCESS GifCurrent
     RANGE Vr, Tref, Vt_star
     RANGE DV, lambda0
     RANGE tau_eta1, tau_eta2, tau_eta3, a_eta1, a_eta2, a_eta3

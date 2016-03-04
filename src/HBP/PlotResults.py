@@ -13,18 +13,18 @@ sys.path.append('../')
 
 
 def interpolateFilerExps(filter_param, tmax=1000.0, dt=1.0):
-    
+
     support = np.arange(0, int(tmax/dt))*dt
     filter = np.zeros(len(support))
     for i in np.arange(filter_param[0]) :
-        
+
         filter += np.exp(-support/filter_param[1][i])*filter_param[2][i]
-    
+
     return (support, filter)
 
 
 def appendClamped_smaller(mylist, value, clamp):
-    
+
     if value < clamp :
         mylist.append(clamp)
     else :
@@ -32,7 +32,7 @@ def appendClamped_smaller(mylist, value, clamp):
 
 
 def appendClamped_larger(mylist, value, clamp):
-    
+
     if value > clamp :
         mylist.append(clamp)
     else :
@@ -41,7 +41,7 @@ def appendClamped_larger(mylist, value, clamp):
 
 
 #results = pickle.load(open( "../../HBP_results/HBP_modelparam.pkl", "r" ))
-results = np.load("../../mydata/hbp/GIFparametersHBP.npy").item()
+results = np.load("../../HBP_results/GIFparametersHBP.npy").item()
 
 L_test = []
 L_train = []
@@ -57,58 +57,58 @@ cell_cnt = 0
 problem_cnt = 0
 warning_cnt = 0
 
-err = [] 
+err = []
 
 
 for gid in np.arange(62693, 94039) :
 #for gid in np.arange(62693, 62693+100) :
-    
+
     err_tmp = np.zeros(10)
-    
+
     try :
-        
+
         r = results[gid].item()
         cell_cnt += 1
 
 
         if r['fit_problem'] == False :
-        
+
             appendClamped_smaller(L_test, r['likelihood_testset'], -10.0)
-            appendClamped_smaller(L_train, r['likelihood_trainingset'], -10.0)  
-              
+            appendClamped_smaller(L_train, r['likelihood_trainingset'], -10.0)
+
             appendClamped_smaller(V_test, r['pct_var_explained_testset'], -1.0)
-            appendClamped_smaller(V_train, r['pct_var_explained_trainingset'], -1.0)    
-            
-            appendClamped_smaller(V_exp, r['pct_var_explained_changeduetoexpassumption'], -100.0)  
-                 
-            appendClamped_larger(DV, r['model']['DV'], 20.0)  
-            
+            appendClamped_smaller(V_train, r['pct_var_explained_trainingset'], -1.0)
+
+            appendClamped_smaller(V_exp, r['pct_var_explained_changeduetoexpassumption'], -100.0)
+
+            appendClamped_larger(DV, r['model']['DV'], 20.0)
+
             (gamma_s, gamma) = interpolateFilerExps(r['model']['gamma'], tmax=1000.0, dt=1.0)
             gammas.append(gamma)
-    
+
             (eta_s, eta) = interpolateFilerExps(r['model']['eta'], tmax=1000.0, dt=1.0)
             etas.append(eta)
-            
+
             err_tmp[0] = 1
             err.append(err_tmp)
-            
-            #plt.plot([0], [r['gid']], '.', markersize=10, mfc='green', mec='green')   
-        
+
+            #plt.plot([0], [r['gid']], '.', markersize=10, mfc='green', mec='green')
+
         else :
-        
+
             problem_cnt += 1
-                        
+
             err_ind = [ int(x) for x in r['fit_problem_which']]
- 
+
             err_tmp[err_ind] = 1
-            
+
             err.append(err_tmp)
-                 
 
 
-        
+
+
     except Exception :
-        
+
         print "No such a gid."
 
 
@@ -119,9 +119,9 @@ plt.figure(facecolor='white')
 plt.plot(err_sum, '.', ms=10, color='red')
 plt.xlim([-1, 11])
 
-labels = ['OK', 
-          'L non value encountered', 
-          'L did not converge', 
+labels = ['OK',
+          'L non value encountered',
+          'L did not converge',
           'L numerical instability',
           'V big drop due to exp',
           'No static threshold',
@@ -134,14 +134,14 @@ labels = ['OK',
 # You can specify a rotation for the tick labels in degrees or with keywords.
 plt.xticks(np.arange(10), labels, rotation='vertical')
 plt.ylabel("Number of cells")
-print "Number of cells: ", cell_cnt 
-print "Number of problems: ", problem_cnt 
+print "Number of cells: ", cell_cnt
+print "Number of problems: ", problem_cnt
 plt.title("Analysis of problems during fit")
 plt.show()
-    
-    
-    
-    
+
+
+
+
 bins_nb = 100
 
 plt.figure(facecolor='white', figsize=(14,10))
@@ -158,13 +158,13 @@ plt.hist(V_test, bins=bins_nb,range=(-1,100), color='red', histtype='stepfilled'
 plt.hist(V_train, bins=bins_nb, range=(-1,100), color='black', histtype='step',lw=3)
 plt.xlabel('Var Explained (%)')
 
-# plot pct var explained drop due to exp 
+# plot pct var explained drop due to exp
 plt.subplot(3,3,3)
 plt.hist(V_exp, bins=bins_nb,range=(-100,100), color='red', histtype='stepfilled')
 plt.xlabel('Var Explained Change due to Exp(%)')
 
 
-# plot pct var explained drop due to exp 
+# plot pct var explained drop due to exp
 plt.subplot(3,3,4)
 plt.hist(DV, bins=bins_nb,range=(0,10), color='red', histtype='stepfilled')
 plt.xlabel('DV (mV)')
@@ -173,22 +173,19 @@ plt.xlabel('DV (mV)')
 plt.subplot(3,3,5)
 for gamma in gammas :
     plt.plot(gamma_s, gamma)
-    
-plt.xlabel('Time (ms)')    
-plt.ylabel('Gamma (mV)')  
-plt.ylim([-20, 20])  
+
+plt.xlabel('Time (ms)')
+plt.ylabel('Gamma (mV)')
+plt.ylim([-20, 20])
 
 plt.subplot(3,3,6)
 for eta in etas :
     plt.plot(eta_s, eta)
-    
-plt.xlabel('Time (ms)')    
-plt.ylabel('Eta (nA)')  
-plt.ylim([-1, 1])  
+
+plt.xlabel('Time (ms)')
+plt.ylabel('Eta (nA)')
+plt.ylim([-1, 1])
 plt.xlim([-10, 300])
 """
 
 plt.show()
-
-
-    

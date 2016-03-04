@@ -25,7 +25,7 @@ class GIF_NEURON(GIF):
         super(GIF_NEURON, self).__init__(dt)
 
 
-    def simulate_seed(self, I, V0, seed):
+    def simulate_seed(self, I, V0, seed, passive_axon=False):
 
         """
         Simulate the spiking response of the GIF model to an input current I (nA) with time step dt.
@@ -44,11 +44,27 @@ class GIF_NEURON(GIF):
 
         soma = h.Section(name='soma')
 
+        if passive_axon: # simulate a passive axon for network implementation
+
+            h.execute('create axon[2]')
+            axon = h.axon
+
+            for index, section in enumerate(axon):
+                section.nseg = 1
+                section.L = 1e-9
+                section.diam = 1e-9
+                section.Ra = 1e-9
+                #section.insert('pas')
+                #section(0.5).pas.g = 1e-9
+
+            axon[0].connect(soma, 1.0, 0.0)
+            axon[1].connect(axon[0], 1.0, 0.0)
+
         cm = 1 # uF/cm2
         Area = self.C*1e-3 / cm    # (uF/(uF/cm2)) = cm2 # self.C in nF
         l = numpy.sqrt(Area / numpy.pi) * 1e4   # um
 
-        soma.cm = 1
+        soma.cm = cm
         soma.L = l      # um
         soma.diam = l   # um
         soma.nseg = 1
@@ -58,7 +74,7 @@ class GIF_NEURON(GIF):
         soma(0.5).pas.g = g
         soma(0.5).pas.e = self.El
 
-        gif_fun = h.gif(soma(0.5))
+        gif_fun = h.GifCurrent(soma(0.5))
         #gif_fun.toggleVerbose()
 
         gif_fun.Vr        = self.Vr
@@ -111,7 +127,12 @@ class GIF_NEURON(GIF):
         rec_t.record(h._ref_t)
 
         rec_v = h.Vector()
-        rec_v.record(soma(0.5)._ref_v)
+
+        if passive_axon:
+            print "Recording from passive axon"
+            rec_v.record(axon[1](0.5)._ref_v)
+        else:
+            rec_v.record(soma(0.5)._ref_v)
 
         rec_eta = h.Vector()
         rec_eta.record(gif_fun._ref_i_eta)
@@ -200,7 +221,7 @@ if __name__ == '__main__':
 
     I = numpy.concatenate(I)
 
-    (time, V, eta_sum, V_T, spks, p_dontspike, urand, i) = hGIF.simulate_seed(I, V0, seed)
+    (time, V, eta_sum, V_T, spks, p_dontspike, urand, i) = hGIF.simulate_seed(I, V0, seed, passive_axon=True)
 
     print len(urand), urand
 

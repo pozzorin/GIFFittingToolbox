@@ -76,7 +76,7 @@ hGIF.gamma.setFilter_Timescales([5.0, 200.0, 250.0])
 hGIF.gamma.setFilter_Coefficients([15.0, 3.0, 1.0])
 
 # Simulate model response
-(htime, hV, heta_sum, hV_T, hspks, hp_dontspike, hurand, hi) = hGIF.simulate_seed(I, V0, seed)
+(htime, hV, heta_sum, hV_T, hspks, hp_dontspike, hurand, hi) = hGIF.simulate_seed(I, V0, seed, passive_axon=False)
 
 
 # DEFINE NEW GIF MODEL (EXP BASED KERNELS)
@@ -105,28 +105,33 @@ myGIF.gamma.setFilter_Coefficients([15.0, 3.0, 1.0])
 
 plb.figure('GIF', figsize=(16,8))
 plt.subplot(3,1,1)
-plt.plot(time, I, 'gray')
-plt.plot(htime, hi, 'k')
+plt.plot(time, I, '-', color=gr1, label="Input current (C++)", linewidth=2)
+plt.plot(htime, hi, '--', color=k1, label="Input current (NEURON)", linewidth=2)
 
-plt.plot(time, eta_sum, color=r1)
-plt.plot(htime, heta_sum, color=b1)
+plt.plot(time, eta_sum, '-', color=r1, label="AHP current (C++)", linewidth=2)
+plt.plot(htime, heta_sum, '--', color=b1, label="AHP current (NEURON)", linewidth=2)
 #plt.xlim(0,1000)
+plt.ylabel("nA")
+plt.legend()
 
 plt.subplot(3,1,2)
-plt.plot(time, V, 'gray')
-plt.plot(htime, hV, 'k')
+plt.plot(time, V, '-', color=gr1, label="v(C++)", linewidth=2)
+plt.plot(htime, hV, '--', color=k1, label="v(NEURON)", linewidth=2)
 
-plt.plot(time, V_T, color=r1)
-plt.plot(htime, hV_T, color=b1)
+plt.plot(time, V_T, '-', color=r1, label="Threshold (C++)", linewidth=2)
+plt.plot(htime, hV_T, '--', color=b1, label="Threshold (NEURON)", linewidth=2)
 #plt.xlim(0,1000)
+plt.ylabel("mV")
+plt.legend()
 
 plt.subplot(3,1,3)
 #plt.plot(time, hp_dontspike)
-error = numpy.sqrt((V-hV)**2)
 error = V-hV
-plt.plot(time, error, color=r1)
+plt.plot(time, error, color=r1, label="v(C++) - v(NEURON)", linewidth=2)
 #plt.xlim(0,1000)
 plt.ylim(-0.1,0.1)
+plt.ylabel("mV")
+plt.legend()
 
 plt.savefig('./Comparison_NEURON.pdf', dpi=300)
 plt.show()
