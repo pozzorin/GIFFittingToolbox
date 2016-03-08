@@ -9,6 +9,7 @@ sys.path.append('../')
 import matplotlib.pylab as plb
 import numpy as np
 
+
 from GIF import *
 from GIF_HT import *
 from Filter_Rect_LogSpaced import *
@@ -18,10 +19,10 @@ from Filter_Exps import *
 
 # PARAMETERS
 ####################################################
-dt = 0.1    # ms, timestep for num simulations. 
+dt = 0.1    # ms, timestep for num simulations.
 seed = 1    # seed used for random number generator
 
-V0 = -70.0  # mV, initial condition for voltage 
+V0 = -70.0  # mV, initial condition for voltage
 
 
 # CREATE INPUT CURRENT
@@ -79,8 +80,8 @@ print dic['model']
 # SAVE I, V AND SPKS IN SEPARATE FILES
 ####################################################
 
-np.savetxt('/Users/christianpozzorini/Desktop/GIFtest_I.txt', I, delimiter=',')  
-np.savetxt('/Users/christianpozzorini/Desktop/GIFtest_V.txt', V, delimiter=',')
-np.savetxt('/Users/christianpozzorini/Desktop/GIFtest_s.txt', spks, delimiter=',')
-np.savetxt('/Users/christianpozzorini/Desktop/GIFtest_rnd.txt', rnd, delimiter=',')
-np.savetxt('/Users/christianpozzorini/Desktop/GIFtest_l.txt', l, delimiter=',')
+np.savetxt('./GIFtest_I.txt', I, delimiter=',')
+np.savetxt('./GIFtest_V.txt', V, delimiter=',')
+np.savetxt('./GIFtest_s.txt', spks, delimiter=',')
+np.savetxt('./GIFtest_rnd.txt', rnd, delimiter=',')
+np.savetxt('./GIFtest_l.txt', l, delimiter=',')
