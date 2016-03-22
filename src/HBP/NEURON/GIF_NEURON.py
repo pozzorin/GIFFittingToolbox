@@ -13,6 +13,8 @@ from numpy import nan, NaN
 
 import math
 from GIF import *
+from neuron import h
+
 
 class GIF_NEURON(GIF):
 
@@ -24,30 +26,12 @@ class GIF_NEURON(GIF):
 
         super(GIF_NEURON, self).__init__(dt)
 
-
-    def simulate_seed(self, I, V0, seed, passive_axon=False):
-
-        """
-        Simulate the spiking response of the GIF model to an input current I (nA) with time step dt.
-        V0 indicate the initial condition V(0)=V0.
-        The function returns:
-        - time     : ms, support for V, eta_sum, V_T, spks
-        - V        : mV, membrane potential
-        - eta_sum  : nA, adaptation current
-        - V_T      : mV, firing threshold
-        - spks     : ms, list of spike times
-        """
-        from neuron import h
-
-        # Input parameters
-        T         = len(I)*self.dt
-
-        soma = h.Section(name='soma')
-
+    def _build(self, passive_axon=False):
+        self.soma = soma = h.Section(name='soma')
         if passive_axon: # simulate a passive axon for network implementation
 
             h.execute('create axon[2]')
-            axon = h.axon
+            self.axon = axon = h.axon
 
             for index, section in enumerate(axon):
                 section.nseg = 1
@@ -74,7 +58,7 @@ class GIF_NEURON(GIF):
         soma(0.5).pas.g = g
         soma(0.5).pas.e = self.El
 
-        gif_fun = h.GifCurrent(soma(0.5))
+        gif_fun = self.gif_fun = h.GifCurrent(soma(0.5))
         #gif_fun.toggleVerbose()
 
         gif_fun.Vr        = self.Vr
@@ -102,6 +86,24 @@ class GIF_NEURON(GIF):
         gif_fun.a_gamma2 = self.gamma.filter_coeff[1]
         gif_fun.a_gamma3 = self.gamma.filter_coeff[2]
 
+    def simulate_seed(self, I, V0, seed, passive_axon=False):
+
+        """
+        Simulate the spiking response of the GIF model to an input current I (nA) with time step dt.
+        V0 indicate the initial condition V(0)=V0.
+        The function returns:
+        - time     : ms, support for V, eta_sum, V_T, spks
+        - V        : mV, membrane potential
+        - eta_sum  : nA, adaptation current
+        - V_T      : mV, firing threshold
+        - spks     : ms, list of spike times
+        """
+
+        # Input parameters
+        T         = len(I)*self.dt
+
+        self._build(passive_axon=passive_axon)
+
         rndd = h.Random(seed)
         #randseed1 = seed * 100000 + 100
         #randseed2 = seed + 250
@@ -109,10 +111,10 @@ class GIF_NEURON(GIF):
         #rndd.normal(0, 1)
         rndd.uniform(0, 1)
         #rndd.negexp(1)
-        gif_fun.setRNG(rndd)
+        self.gif_fun.setRNG(rndd)
 
         # Inject current
-        iclamp = h.IClamp(0.5, sec=soma)
+        iclamp = h.IClamp(0.5, sec=self.soma)
         iclamp.dur = T
         #iclamp.del = 0
 
@@ -130,21 +132,21 @@ class GIF_NEURON(GIF):
 
         if passive_axon:
             print "Recording from passive axon"
-            rec_v.record(axon[1](0.5)._ref_v)
+            rec_v.record(self.axon[1](0.5)._ref_v)
         else:
-            rec_v.record(soma(0.5)._ref_v)
+            rec_v.record(self.soma(0.5)._ref_v)
 
         rec_eta = h.Vector()
-        rec_eta.record(gif_fun._ref_i_eta)
+        rec_eta.record(self.gif_fun._ref_i_eta)
 
         rec_gamma = h.Vector()
-        rec_gamma.record(gif_fun._ref_gamma_sum)
+        rec_gamma.record(self.gif_fun._ref_gamma_sum)
 
         rec_pdontspike = h.Vector()
-        rec_pdontspike.record(gif_fun._ref_p_dontspike)
+        rec_pdontspike.record(self.gif_fun._ref_p_dontspike)
 
         rec_urand = h.Vector()
-        rec_urand.record(gif_fun._ref_rand)
+        rec_urand.record(self.gif_fun._ref_rand)
 
         rec_i = h.Vector()
         rec_i.record(iclamp._ref_amp)
