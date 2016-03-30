@@ -169,7 +169,7 @@ plt.subplot(3,3,4)
 plt.hist(DV, bins=bins_nb,range=(0,10), color='red', histtype='stepfilled')
 plt.xlabel('DV (mV)')
 
-"""
+
 plt.subplot(3,3,5)
 for gamma in gammas :
     plt.plot(gamma_s, gamma)
@@ -186,6 +186,5 @@ plt.xlabel('Time (ms)')
 plt.ylabel('Eta (nA)')
 plt.ylim([-1, 1])
 plt.xlim([-10, 300])
-"""
 
 plt.show()
